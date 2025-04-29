@@ -3,9 +3,13 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "parse-jmdict": "bun run src/jmdict-2-sqlite-raw.ts"
+  },
   "devDependencies": {
     "@types/bun": "^1.2.10",
-    "drizzle-kit": "^0.31.0"
+    "drizzle-kit": "^0.31.0",
+    "tsx": "^4.19.4"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -14,6 +18,7 @@
     "@libsql/client": "^0.15.4",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.43.1",
+    "fast-xml-parser": "^5.2.1",
     "yomichan-dict-builder": "^2.9.2"
   }
 }
