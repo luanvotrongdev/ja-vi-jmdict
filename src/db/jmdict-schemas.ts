@@ -14,44 +14,17 @@ export const jmdictKeleTable = sqliteTable("jmdict_kele_table", {
   id: int().primaryKey({autoIncrement: true}),
   ent_seq: int().references(() => jmdictEntryTable.ent_seq, { onDelete: "cascade" }),
   keb: text().notNull(),
-})
-
-export const jmdictKeInf_KeleTable = sqliteTable("jmdict_ke_inf_kele_table", {
-  id: int().primaryKey({autoIncrement: true}),
-  kele: int().references(() => jmdictKeleTable.id, { onDelete: "cascade" }),
-  ke_inf: text().notNull()
-})
-
-export const jmdictKePri_KeleTable = sqliteTable("jmdict_ke_pri_kele_table", {
-  id: int().primaryKey({autoIncrement: true}),
-  kele: int().references(() => jmdictKeleTable.id, { onDelete: "cascade" }),
-  ke_pri: text().notNull()
+  ke_inf: text(),
+  ke_pri: text()
 })
 
 export const jmdictReleTable = sqliteTable("jmdict_rele_table", {
   id: int().primaryKey({autoIncrement: true}),
   ent_seq: int().references(() => jmdictEntryTable.ent_seq, { onDelete: "cascade" }),
   reb: text().notNull(),
-})
-
-export const jmdictReNoKanji_ReleTable = sqliteTable("jmdict_re_kanji_rele_table", {
-  id: int().primaryKey({autoIncrement: true}),
-  re_nokanji: text().notNull()
-})
-
-export const jmdictReRestr_ReleTable = sqliteTable("jmdict_re_restr_rele_table", {
-  id: int().primaryKey({autoIncrement: true}),
-  re_restr: text().notNull()
-})
-
-export const jmdictReInf_ReleTable = sqliteTable("jmdict_re_inf_rele_table", {
-  id: int().primaryKey({autoIncrement: true}),
-  re_restr: text().notNull()
-})
-
-export const jmdictRePri_ReleTable = sqliteTable("jmdict_re_pri_rele_table", {
-  id: int().primaryKey({autoIncrement: true}),
-  re_pri: text().notNull()
+  re_nokanji: text().notNull(),
+  re_restr: text().notNull(),
+  re_pri: text()
 })
 
 export const jmdictSenseTable = sqliteTable("jmdict_sense_table", {
