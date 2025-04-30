@@ -11,10 +11,20 @@ export const jmdictEntryTable = sqliteTable("jmdict_entry_table", {
 })
 
 export const jmdictKeleTable = sqliteTable("jmdict_kele_table", {
-  id: int().primaryKey({autoIncrement: true}),
+  id: int().primaryKey(),
   ent_seq: int().references(() => jmdictEntryTable.ent_seq, { onDelete: "cascade" }),
   keb: text().notNull(),
-  ke_inf: text(),
+})
+
+export const jmdictKeInf_KeleTable = sqliteTable("jmdict_ke_inf_kele_table", {
+  id: int().primaryKey({ autoIncrement: true }),
+  kele_id: int().references(() => jmdictKeleTable.id, { onDelete: "cascade" }),
+  ke_inf: text()
+})
+
+export const jmdictKePri_KeleTable = sqliteTable("jmdict_ke_pri_kele_table", {
+  id: int().primaryKey({ autoIncrement: true }),
+  kele_id: int().references(() => jmdictKeleTable.id, { onDelete: "cascade" }),
   ke_pri: text()
 })
 
