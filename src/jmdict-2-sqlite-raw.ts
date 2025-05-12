@@ -160,9 +160,12 @@ async function inputJmdictKeleToTable(rawEntries: any[]) {
             k_pri = k_pri.concat(elements.k_pri)
         }
     })
-    await db.insert(jmdictKeleTable).values(keles)
-    await db.insert(jmdictKeInf_KeleTable).values(k_inf)
-    await db.insert(jmdictKePri_KeleTable).values(k_pri)
+    if (keles.length !== 0)
+        await db.insert(jmdictKeleTable).values(keles)
+    if (k_inf.length !== 0)
+        await db.insert(jmdictKeInf_KeleTable).values(k_inf)
+    if (k_pri.length !== 0)
+        await db.insert(jmdictKePri_KeleTable).values(k_pri)
     console.log('Done input JMdict Keles to SQLite!')
 }
 
