@@ -4,9 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "push-db": "drizzle-kit push",
-    "download-jmdict": "bun run src/jmdict-download.ts",
-    "parse-jmdict": "bun run src/jmdict-2-sqlite-raw.ts"
+    "drizzle-push": "drizzle-kit push",
+    "download": "bun run src/downloader",
+    "parse": "bun run src/parser"
   },
   "devDependencies": {
     "@types/bun": "^1.2.10",
