@@ -12,7 +12,7 @@ import {
     jmdictReRestr_ReleTable,
     jmdictRepri_ReleTable,
     jmdictReleTable
-} from './db/jmdict-schemas'
+} from './schemas'
 
 if (!process.env.DB_FILE_NAME) {
     throw new Error("Environment variable DB_FILE_NAME is not defined")

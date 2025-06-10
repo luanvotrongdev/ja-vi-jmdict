@@ -1,58 +1,5 @@
 import { int, sqliteTable, text } from "drizzle-orm/sqlite-core";
-
-export const jmdictEntityTable = sqliteTable("jmdict_entity_table", {
-  id: text().primaryKey(),
-  english: text(),
-  vietnamese: text()
-})
-
-export const jmdictEntryTable = sqliteTable("jmdict_entry_table", {
-  ent_seq: int().primaryKey(),
-})
-
-//<!ELEMENT k_ele (keb, ke_inf*, ke_pri*)>
-export const jmdictKeleTable = sqliteTable("jmdict_kele_table", {
-  id: int().primaryKey(),
-  ent_seq: int().references(() => jmdictEntryTable.ent_seq),
-  keb: text().notNull(),
-})
-
-export const jmdictKeInf_KeleTable = sqliteTable("jmdict_ke_inf_kele_table", {
-  id: int().primaryKey({ autoIncrement: true }),
-  kele_id: int().references(() => jmdictKeleTable.id),
-  ke_inf: text()
-})
-
-export const jmdictKePri_KeleTable = sqliteTable("jmdict_ke_pri_kele_table", {
-  id: int().primaryKey({ autoIncrement: true }),
-  kele_id: int().references(() => jmdictKeleTable.id),
-  ke_pri: text()
-})
-
-//<!ELEMENT r_ele (reb, re_nokanji?, re_restr*, re_inf*, re_pri*)>
-export const jmdictReleTable = sqliteTable("jmdict_rele_table", {
-  id: int().primaryKey({autoIncrement: true}),
-  ent_seq: int().references(() => jmdictEntryTable.ent_seq),
-  reb: text().notNull()
-})
-
-export const jmdictReRestr_ReleTable = sqliteTable("jmdict_restr_rele_table", {
-  id: int().primaryKey({ autoIncrement: true }),
-  rele_id: int().references(() => jmdictReleTable.id),
-  re_restr: text()
-})
-
-export const jmdictReInf_ReleTable = sqliteTable("jmdict_re_inf_rele_table", {
-  id: int().primaryKey({ autoIncrement: true }),
-  rele_id: int().references(() => jmdictReleTable.id),
-  re_inf: text()
-})
-
-export const jmdictRepri_ReleTable = sqliteTable("jmdict_repri_rele_table", {
-  id: int().primaryKey({ autoIncrement: true }),
-  rele_id: int().references(() => jmdictReleTable.id),
-  re_pri: text()
-})
+import { jmdictEntryTable } from "./jmdict-entry-schemas";
 
 export const jmdictSenseTable = sqliteTable("jmdict_sense_table", {
   id: int().primaryKey({autoIncrement: true}),
