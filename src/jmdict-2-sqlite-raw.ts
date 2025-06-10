@@ -2,7 +2,7 @@ import 'dotenv/config'
 import { drizzle } from 'drizzle-orm/libsql'
 import { XMLParser } from 'fast-xml-parser'
 import fs from 'fs'
-import { cwd } from 'process'
+import { cwd, exit } from 'process'
 import {
     jmdictEntryTable,
     jmdictKeInf_KeleTable,
@@ -18,9 +18,12 @@ if (!process.env.DB_FILE_NAME) {
     throw new Error("Environment variable DB_FILE_NAME is not defined")
 }
 const db = drizzle(process.env.DB_FILE_NAME)
-await parseJmdictToSqliteRaw();
+await cleanJmdictTables()
 
-export async function parseJmdictToSqliteRaw() {
+let entries = await parseJmdictToSqliteRaw();
+await inputJmdictChunksToTables(entries, 900)
+
+export async function parseJmdictToSqliteRaw() : Promise<any[]> {
     console.log('Parsing JMdict to SQLite raw...')
     const bufferXML = fs.readFileSync(`${cwd()}/${process.env.JMDICT_FILE_NAME}`);
     const parser = new XMLParser({
@@ -30,14 +33,31 @@ export async function parseJmdictToSqliteRaw() {
     let jObj = parser.parse(bufferXML);
     console.log('Done parsing JMdict to SQLite raw!')
 
-    await inputJmdictChunksToTables(jObj.JMdict.entry, 900)
+    return jObj.JMdict.entry
+}
+
+async function cleanJmdictTables() {
+    console.log('Cleaning JMdict Tables...')
+    await db.delete(jmdictKePri_KeleTable)
+    await db.delete(jmdictKeInf_KeleTable)
+    await db.delete(jmdictKeleTable)
+    
+    await db.delete(jmdictRepri_ReleTable)
+    await db.delete(jmdictReInf_ReleTable)
+    await db.delete(jmdictReRestr_ReleTable)
+    await db.delete(jmdictReleTable)
+
+    await db.delete(jmdictEntryTable)
+    console.log('Done cleaning JMdict Tables!')
 }
 
 async function inputJmdictChunksToTables(rawEntries: any[], chunkSize: number) {
-    console.log('Input JMdict Chunks Entries to SQLite...')
+let entryCount = rawEntries.length;
+console.log(`JMdict entries count: ${entryCount}`)
+if (entryCount === 0)  exit
     var chunk: any[];
     for (let i = 0; i < rawEntries.length; i += chunkSize) {
-        console.log(`Input JMdict Chunks Entries to SQLite... ${i} / ${rawEntries.length}`)
+        console.log(`Input JMdict Chunks Entries to SQLite...`)
         chunk = rawEntries.slice(i, Math.min(i + chunkSize, rawEntries.length - 1))
         await inputJmdictEntryToTable(chunk)
         await inputJmdictKeleToTable(chunk)
@@ -48,7 +68,6 @@ async function inputJmdictChunksToTables(rawEntries: any[], chunkSize: number) {
 
 async function inputJmdictEntryToTable(rawEntries: any[]) {
     console.log('Input JMdict Entry to SQLite...')
-    await db.delete(jmdictEntryTable)
     const entries: typeof jmdictEntryTable.$inferInsert[] = rawEntries.map((entry: any) => {
         return {
             ent_seq: entry.ent_seq,

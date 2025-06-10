@@ -4,6 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "push-db": "drizzle-kit push",
+    "download-jmdict": "bun run src/jmdict-download.ts",
     "parse-jmdict": "bun run src/jmdict-2-sqlite-raw.ts"
   },
   "devDependencies": {
@@ -15,9 +17,9 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@libsql/client": "^0.15.4",
+    "@libsql/client": "^0.15.9",
     "dotenv": "^16.5.0",
-    "drizzle-orm": "^0.43.1",
+    "drizzle-orm": "^0.44.2",
     "fast-xml-parser": "^5.2.1",
     "yomichan-dict-builder": "^2.9.2"
   }
