@@ -27,8 +27,8 @@ function expandRawSenseToRows(ent_seq: number, sense_id: number, rawSense: any):
     misc: typeof jmdictMisc_SenseTable.$inferInsert[],
     sinf: typeof jmdictSinf_SenseTable.$inferInsert[],
     dial: typeof jmdictDial_SenseTable.$inferInsert[],
-    // lsource: typeof jmdictLsource_SenseTable.$inferInsert[],
-    // gloss: typeof jmdictGloss_SenseTable.$inferInsert[]
+    lsource: typeof jmdictLsource_SenseTable.$inferInsert[],
+    gloss: typeof jmdictGloss_SenseTable.$inferInsert[]
 } {
     var stagk: any[] = [];
     var stagr: any[] = [];
@@ -39,8 +39,8 @@ function expandRawSenseToRows(ent_seq: number, sense_id: number, rawSense: any):
     var misc: any[] = [];
     var sinf: any[] = [];
     var dial: any[] = [];
-    // var lsource: any[] = [];
-    // var gloss: any[] = [];
+    var lsource: any[] = [];
+    var gloss: any[] = [];
 
     parseChildXmlElement(rawSense.stagk, (ele, index) => {
             stagk.push({
@@ -105,6 +105,20 @@ function expandRawSenseToRows(ent_seq: number, sense_id: number, rawSense: any):
                 dial: ele
             })
         })
+    parseChildXmlElement(rawSense.lsource, (ele, index) => {
+            lsource.push({
+                sense_id: sense_id,
+                id: sense_id * 100 + index,
+                lsource: ele
+            })
+        })
+    parseChildXmlElement(rawSense.gloss, (ele, index) => {
+            gloss.push({
+                sense_id: sense_id,
+                id: sense_id * 100 + index,
+                gloss: ele
+            })
+        })
     return {
         sense: {
             ent_seq: ent_seq,
@@ -119,6 +133,8 @@ function expandRawSenseToRows(ent_seq: number, sense_id: number, rawSense: any):
         misc: misc,
         sinf: sinf,
         dial: dial,
+        lsource: lsource,
+        gloss: gloss
     }
 }
 
@@ -133,6 +149,8 @@ function parseRawEntryReles(entry: any): {
     misc: typeof jmdictMisc_SenseTable.$inferInsert[],
     sinf: typeof jmdictSinf_SenseTable.$inferInsert[],
     dial: typeof jmdictDial_SenseTable.$inferInsert[],
+    lsource: typeof jmdictLsource_SenseTable.$inferInsert[],
+    gloss: typeof jmdictGloss_SenseTable.$inferInsert[]
 } {
     var sense_count = 0
     var sense: typeof jmdictSenseTable.$inferInsert[] = []
@@ -145,6 +163,8 @@ function parseRawEntryReles(entry: any): {
     var misc: typeof jmdictMisc_SenseTable.$inferInsert[] = []
     var sinf: typeof jmdictSinf_SenseTable.$inferInsert[] = []
     var dial: typeof jmdictDial_SenseTable.$inferInsert[] = []
+    var lsource: typeof jmdictLsource_SenseTable.$inferInsert[] = []
+    var gloss: typeof jmdictGloss_SenseTable.$inferInsert[] = []
 
     parseChildXmlElement(entry.sense, (ele, index) => {
         const elements = expandRawSenseToRows(entry.ent_seq, entry.ent_seq * 100 + index, ele);
@@ -158,6 +178,8 @@ function parseRawEntryReles(entry: any): {
         misc = misc.concat(elements.misc)
         sinf = sinf.concat(elements.sinf)
         dial = dial.concat(elements.dial)
+        lsource = lsource.concat(elements.lsource)
+        gloss = gloss.concat(elements.gloss)
         sense_count++
     })
 
@@ -174,6 +196,8 @@ function parseRawEntryReles(entry: any): {
         misc: misc,
         sinf: sinf,
         dial: dial,
+        lsource: lsource,
+        gloss: gloss
     }
 }
 
@@ -188,6 +212,8 @@ export default async function inputJmdictSenseToTable(db: LibSQLDatabase, rawEnt
     var misc: typeof jmdictMisc_SenseTable.$inferInsert[] = []
     var sinf: typeof jmdictSinf_SenseTable.$inferInsert[] = []
     var dial: typeof jmdictDial_SenseTable.$inferInsert[] = []
+    var lsource: typeof jmdictLsource_SenseTable.$inferInsert[] = []
+    var gloss: typeof jmdictGloss_SenseTable.$inferInsert[] = []
 
     rawEntries.forEach(entry => {
         const elements = parseRawEntryReles(entry)
@@ -202,6 +228,8 @@ export default async function inputJmdictSenseToTable(db: LibSQLDatabase, rawEnt
             misc = misc.concat(elements.misc)
             sinf = sinf.concat(elements.sinf)
             dial = dial.concat(elements.dial)
+            lsource = lsource.concat(elements.lsource)
+            gloss = gloss.concat(elements.gloss)
         }
     })
     if (sense.length > 0) {
@@ -233,6 +261,12 @@ export default async function inputJmdictSenseToTable(db: LibSQLDatabase, rawEnt
     }
     if (dial.length > 0) {
         await db.insert(jmdictDial_SenseTable).values(dial);
+    }
+    if (lsource.length > 0) {
+        await db.insert(jmdictLsource_SenseTable).values(lsource);
+    }
+    if (gloss.length > 0) {
+        await db.insert(jmdictGloss_SenseTable).values(gloss);
     }
     console.log('Done input JMdict Senses to SQLite!')
 }
