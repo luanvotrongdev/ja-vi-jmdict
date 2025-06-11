@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "drizzle-push": "drizzle-kit push",
-    "download": "bun run src/downloader",
+    "fetch": "bun run src/downloader",
     "parse": "bun run src/parser"
   },
   "devDependencies": {

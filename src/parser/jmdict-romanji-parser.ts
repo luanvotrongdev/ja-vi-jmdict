@@ -1,9 +1,9 @@
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { 
-    jmdictReInf_ReleTable, 
-    jmdictReleTable, 
-    jmdictRepri_ReleTable, 
-    jmdictReRestr_ReleTable 
+import {
+    jmdictReInf_ReleTable,
+    jmdictReleTable,
+    jmdictRepri_ReleTable,
+    jmdictReRestr_ReleTable
 } from "../schemas";
 import { parseChildXmlElement } from "./utils";
 
