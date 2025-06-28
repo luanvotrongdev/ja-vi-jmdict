@@ -25,7 +25,9 @@ import {
     jmdictLsource_SenseTable,
     jmdictDial_SenseTable,
     jmdictGloss_SenseTable,
-    jmdictSenseTable
+    jmdictSenseTable,
+    jmdictExample_SenseTable,
+    jmdictExSentences_SenseTable
 } from '../schemas'
 import { inputJmdictKeleToTable } from './jmdict-kanji-parser'
 import inputJmdictEntryToTable from './jmdict-entry-parser'
@@ -60,11 +62,13 @@ async function cleanJmdictTables() {
     await db.delete(jmdictKeInf_KeleTable)
     await db.delete(jmdictKeleTable)
 
+    console.log('Cleaning JMdict Tables 2...')
     await db.delete(jmdictRepri_ReleTable)
     await db.delete(jmdictReInf_ReleTable)
     await db.delete(jmdictReRestr_ReleTable)
     await db.delete(jmdictReleTable)
 
+    console.log('Cleaning JMdict Tables 3...')
     await db.delete(jmdictStagk_SenseTable)
     await db.delete(jmdictStagr_SenseTable)
     await db.delete(jmdictPos_SenseTable)
@@ -75,8 +79,12 @@ async function cleanJmdictTables() {
     await db.delete(jmdictSinf_SenseTable)
     await db.delete(jmdictLsource_SenseTable)
     await db.delete(jmdictDial_SenseTable)
+    await db.delete(jmdictGloss_SenseTable)
+    await db.delete(jmdictExample_SenseTable)
+    await db.delete(jmdictExSentences_SenseTable)
     await db.delete(jmdictSenseTable)
 
+    console.log('Cleaning JMdict Tables 4...')
     await db.delete(jmdictEntryTable)
     console.log('Done cleaning JMdict Tables!')
 }
