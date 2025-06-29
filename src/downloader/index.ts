@@ -10,6 +10,10 @@ if (!process.env.JMDICT_GZ_NAME) {
     throw new Error("Environment variable JMDICT_GZ_NAME is not defined")
 }
 
+if (!fs.existsSync(`${cwd()}/sources`)) {
+    fs.mkdirSync(`${cwd()}/sources`, { recursive: true })
+}
+
 const gzUrl = `${cwd()}/sources/${process.env.JMDICT_GZ_NAME}`
 const xmlUrl = `${gzUrl.replace(/\.gz$/, '.xml')}`
 
