@@ -91,7 +91,7 @@ function expandRawSenseToRows(ent_seq: number, sense_id: number, rawSense: any):
                 misc: ele
             })
         })
-    parseChildXmlElement(rawSense.sinf, (ele, index) => {
+    parseChildXmlElement(rawSense.s_inf, (ele, index) => {
             sinf.push({
                 sense_id: sense_id,
                 id: sense_id * 100 + index,
