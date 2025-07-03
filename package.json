@@ -4,22 +4,18 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "drizzle-push": "drizzle-kit push",
     "fetch": "bun run src/downloader",
     "parse": "bun run src/parser"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.10",
-    "drizzle-kit": "^0.31.0",
-    "tsx": "^4.19.4"
+    "@types/bun": "1.2.17",
+    "tsx": "4.20.3"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
-    "@libsql/client": "^0.15.9",
-    "dotenv": "^16.5.0",
-    "drizzle-orm": "^0.44.2",
+    "dotenv": "17.0.1",
     "fast-xml-parser": "^5.2.1",
     "yomichan-dict-builder": "^2.9.2"
   }

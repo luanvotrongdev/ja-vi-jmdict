@@ -29,7 +29,6 @@
     "paths": {
       "@parser/*": ["parser/*"],
       "@downloader/*": ["downloader/*"],
-      "@schemas/*": ["schemas/*"]
     },
   }
 }
