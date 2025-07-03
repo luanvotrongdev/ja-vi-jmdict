@@ -18,3 +18,7 @@ export function parseChildXmlElement(
 
     return count;
 }
+
+var set = new Set<string>();
+set.add('a');
+set.add('a');

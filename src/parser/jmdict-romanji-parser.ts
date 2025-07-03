@@ -4,7 +4,7 @@ import {
     jmdictReleTable,
     jmdictRepri_ReleTable,
     jmdictReRestr_ReleTable
-} from "../schemas";
+} from "schemas";
 import { parseChildXmlElement } from "./utils";
 
 

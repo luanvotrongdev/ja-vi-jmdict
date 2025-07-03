@@ -12,7 +12,7 @@ import {
     jmdictLsource_SenseTable,
     jmdictDial_SenseTable,
     jmdictGloss_SenseTable,
-} from "../schemas";
+} from "schemas";
 import { parseChildXmlElement } from "./utils";
 
 

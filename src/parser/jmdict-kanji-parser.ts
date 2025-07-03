@@ -3,7 +3,7 @@ import {
     jmdictKeInf_KeleTable,
     jmdictKeleTable,
     jmdictKePri_KeleTable
-} from "../schemas";
+} from "schemas";
 import { parseChildXmlElement } from "./utils";
 
 
