@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "fetch": "bun run src/downloader",
+    "preprocess": "bun run src/preprocess",
     "parse": "bun run src/parser"
   },
   "devDependencies": {
