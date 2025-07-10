@@ -13,8 +13,11 @@ if (!jmdict) {
 }
 
 let idSet = new Map<string, boolean>()
-traverseJmdict(new Node("entries", jmdict.entry), (node) => {
-    console.log(`Processing entry ${node.id} ${node.type}`)
+traverseJmdict(null, new Node("root", jmdict.entry), (parentNode, node) => {
+    if (parentNode !== null) {
+        parentNode.push(node.id, node)
+    }
+    console.table(`Processing entry \t ${node.getFullId().join('_')} \t\t\t\t ${node.type}`)
 })
 exit(0)
 

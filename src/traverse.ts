@@ -4,7 +4,7 @@ import { cwd } from 'process'
 
 export const SEPARATOR = '||'
 
-export type TraverseFunction = (node: Node) => void
+export type TraverseFunction = (parentNode: Node | null, node: Node) => void
 
 export async function getJmdict(): Promise<any> {
     console.log('Parsing JMdict to SQLite raw...')
@@ -20,22 +20,26 @@ export async function getJmdict(): Promise<any> {
 }
 
 export function traverseJmdict(
-    node: Node,
+    parentNode: Node | null,
+    node : Node,
     callback: TraverseFunction
 ): void {
-    callback(node)
+    callback(parentNode, node)
     if (node.type ==='object') {
         let keys = Object.keys(node.value)
         keys.forEach(key => {
-           traverseJmdict(new Node(key, node.value[key]), callback) 
+           traverseJmdict(node, 
+            new Node(key, node.value[key]), 
+            callback) 
         })
         return
     }
     if(node.type === 'array')
     {
         node.value.forEach((entry : any) => {
-            const childNode = new Node(node.id, entry)
-            traverseJmdict(childNode, callback)
+            traverseJmdict(node, 
+                new Node(node.id, entry), 
+                callback)
         })
         return
     }
@@ -64,13 +68,17 @@ export class Node {
         this.children.push(node)
     }
 
-    public getFullId(idStacks: string[]): string[]
+    public getFullId(): string[] {
+        return this._getFullId([])
+    }
+
+    private _getFullId(idStacks: string[]): string[]
     {
         idStacks.push(this.id)
 
         if(this.parent === null)
-            return idStacks.reverse()
+            return idStacks.filter(x=>x.length > 0).reverse()
 
-        return this.parent.getFullId(idStacks)
+        return this.parent._getFullId(idStacks)
     }
 }
