@@ -1,8 +1,10 @@
 import fs from 'fs'
+import { exit } from 'process'
 import { 
     getJmdict, 
     traverseJmdict,
-    SEPARATOR
+    SEPARATOR,
+    Node
 } from "traverse"
 
 let jmdict = await getJmdict()
@@ -11,17 +13,10 @@ if (!jmdict) {
 }
 
 let idSet = new Map<string, boolean>()
-traverseJmdict('root', jmdict, (id, entry) => {
-    if(entry === null)
-        return
-    if(id === 'root')
-        return
-    if(!idSet.has(id)) {
-        idSet.set(id, false)
-    }
-    var existing = idSet.get(id) ?? false
-    idSet.set(id, existing || typeof entry === 'string')
+traverseJmdict(new Node("entries", jmdict.entry), (node) => {
+    console.log(`Processing entry ${node.id} ${node.type}`)
 })
+exit(0)
 
 if (idSet.size === 0) {
     throw new Error("No entries found in JMdict")

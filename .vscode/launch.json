@@ -18,6 +18,17 @@
         {
             "type": "bun",
             "request": "launch",
+            "name": "Debug Preprocess Script",
+            "runtimeArgs": [
+                "run",
+                "src/preprocess"
+            ],
+            "cwd": "${workspaceFolder}",
+            "internalConsoleOptions": "neverOpen"
+        },
+        {
+            "type": "bun",
+            "request": "launch",
             "name": "Debug Parse Script",
             "runtimeArgs": [
                 "run",

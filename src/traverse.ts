@@ -4,9 +4,9 @@ import { cwd } from 'process'
 
 export const SEPARATOR = '||'
 
-export type TraverseFunction = (id: string, entry: any, index: number) => void
+export type TraverseFunction = (node: Node) => void
 
-export async function getJmdict(): Promise<any[]> {
+export async function getJmdict(): Promise<any> {
     console.log('Parsing JMdict to SQLite raw...')
     const bufferXML = fs.readFileSync(`${cwd()}/${process.env.JMDICT_FILE_NAME}`)
     const parser = new XMLParser({
@@ -20,53 +20,57 @@ export async function getJmdict(): Promise<any[]> {
 }
 
 export function traverseJmdict(
-    id: string,
-    jmdict: any,
+    node: Node,
     callback: TraverseFunction
 ): void {
-    if(jmdict === null || jmdict === undefined) {
-        // Handle null or undefined case
+    callback(node)
+    if (node.type ==='object') {
+        let keys = Object.keys(node.value)
+        keys.forEach(key => {
+           traverseJmdict(new Node(key, node.value[key]), callback) 
+        })
         return
     }
-    callback(id, jmdict, -1)
-    if (Array.isArray(jmdict)) {
-        traverseJmdictArray(id, jmdict, callback)
+    if(node.type === 'array')
+    {
+        node.value.forEach((entry : any) => {
+            const childNode = new Node(node.id, entry)
+            traverseJmdict(childNode, callback)
+        })
         return
-    }
-    if (typeof jmdict === 'object') {
-        traverseJmdictObject(id, jmdict, callback)
-        return
-    }
-}
-
-function traverseJmdictArray(
-    id: string,
-    jmdict: any[],
-    callback: TraverseFunction
-): void {
-    for (let i = 0; i < jmdict.length; i++) {
-        const entry = jmdict[i]
-        traverseJmdict(id, entry, callback)
-    }
-}
-
-export function traverseJmdictObject(
-    id: string,
-    jmdict: Record<string, any>,
-    callback: TraverseFunction
-): void {
-    const ids : string[] = Object.keys(jmdict)
-    for (let i = 0; i < ids.length; i++) {
-        const childId : any = ids[i]
-        if (typeof childId !== 'string') {
-            continue // Skip non-string keys
-        }
-        const entry = jmdict[childId]
-        traverseJmdict(`${id}${SEPARATOR}${childId}`, entry, callback)
     }
 }
 
 export class Node {
-    public id: string = ''
-    public node : Node[] = []
+    public parent: Node | null = null
+    public children : Node[] = []
+    public id: string
+    public value: any
+    public type: string
+
+    public constructor(id: string, value: any) {
+        this.id = id
+        this.value = value 
+        if (Array.isArray(value)) {
+            this.type = 'array'
+        } else {
+            this.type = typeof value
+        }
+    }
+
+    public push(id: string, node: Node): void {
+        node.parent = this
+        node.id = id
+        this.children.push(node)
+    }
+
+    public getFullId(idStacks: string[]): string[]
+    {
+        idStacks.push(this.id)
+
+        if(this.parent === null)
+            return idStacks.reverse()
+
+        return this.parent.getFullId(idStacks)
+    }
 }
