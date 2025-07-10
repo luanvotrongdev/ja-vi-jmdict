@@ -2,6 +2,8 @@ import { XMLParser } from 'fast-xml-parser'
 import fs from 'fs'
 import { cwd } from 'process'
 
+export const SEPARATOR = '||'
+
 export type TraverseFunction = (id: string, entry: any, index: number) => void
 
 export async function getJmdict(): Promise<any[]> {
@@ -22,16 +24,16 @@ export function traverseJmdict(
     jmdict: any,
     callback: TraverseFunction
 ): void {
-    if (typeof jmdict === 'string') {
-        // Do nothing or handle string case if needed
-        callback(id, jmdict, -1)
+    if(jmdict === null || jmdict === undefined) {
+        // Handle null or undefined case
         return
     }
+    callback(id, jmdict, -1)
     if (Array.isArray(jmdict)) {
         traverseJmdictArray(id, jmdict, callback)
         return
     }
-    if (typeof jmdict === 'object' && jmdict !== null) {
+    if (typeof jmdict === 'object') {
         traverseJmdictObject(id, jmdict, callback)
         return
     }
@@ -60,6 +62,11 @@ export function traverseJmdictObject(
             continue // Skip non-string keys
         }
         const entry = jmdict[childId]
-        traverseJmdict(`${id}_${childId}`, entry, callback)
+        traverseJmdict(`${id}${SEPARATOR}${childId}`, entry, callback)
     }
+}
+
+export class Node {
+    public id: string = ''
+    public node : Node[] = []
 }

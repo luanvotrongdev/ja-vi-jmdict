@@ -1,6 +1,6 @@
 import http, { IncomingMessage } from 'http'
 import fs from 'fs'
-import { cwd, exit } from 'process'
+import { cwd } from 'process'
 import zlib from 'zlib'
 
 if (!process.env.JMDICT_FILE_LINK) {
