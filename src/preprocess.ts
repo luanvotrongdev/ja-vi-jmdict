@@ -12,33 +12,35 @@ if (!jmdict) {
     throw new Error("Failed to parse JMdict or it is not an array")
 }
 
-let  schemasInfo : SchemaInfos = new Map<string, Set<string>>()
+const  schemasInfoSet : SchemaInfos = new Map<string, Set<string>>()
 traverseJmdict(null, new Node("root", jmdict), (parentNode, node) => {
     if (parentNode !== null) {
         parentNode.push(node.id, node)
     }
-    const fullId = node.getFullId().join(SEPARATOR)
-    if(!schemasInfo.has(fullId)) 
-        schemasInfo.set(fullId, new Set<string>())
+    const nodeIds = node.getFullId()
+    const fullId = nodeIds
+                    .splice(1, nodeIds.length-1)
+                    .join(SEPARATOR)
+    if(!schemasInfoSet.has(fullId)) 
+        schemasInfoSet.set(fullId, new Set<string>())
 
-    let set = schemasInfo.get(fullId)
+    let set = schemasInfoSet.get(fullId)
     if(typeof set == 'undefined'
         || set === null) 
         return
     set.add(node.type)
 })
+schemasInfoSet.delete("")
 
-schemasInfo.delete("root")
-
-const table: { fullId: string; types: string }[] = []
-schemasInfo.forEach((types, fullId) => {
-    table.push({
+const schemaTables: { fullId: string; types: string }[] = []
+schemasInfoSet.forEach((types, fullId) => {
+    schemaTables.push({
         fullId: fullId,
         types: types.values().toArray().join(SEPARATOR)
     })
 })  
-table.sort((a, b) => a.fullId.localeCompare(b.fullId))
-console.table(table)
+schemaTables.sort((a, b) => a.fullId.localeCompare(b.fullId))
+console.table(schemaTables)
 exit(0)
 
 let idSet = new Map<string, boolean>()
