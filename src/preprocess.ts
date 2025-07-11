@@ -28,6 +28,8 @@ traverseJmdict(null, new Node("root", jmdict), (parentNode, node) => {
     set.add(node.type)
 })
 
+schemasInfo.delete("root")
+
 const table: { fullId: string; types: string }[] = []
 schemasInfo.forEach((types, fullId) => {
     table.push({
@@ -35,6 +37,7 @@ schemasInfo.forEach((types, fullId) => {
         types: types.values().toArray().join(SEPARATOR)
     })
 })  
+table.sort((a, b) => a.fullId.localeCompare(b.fullId))
 console.table(table)
 exit(0)
 
