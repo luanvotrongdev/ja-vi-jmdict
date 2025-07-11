@@ -12,15 +12,33 @@ if (!jmdict) {
     throw new Error("Failed to parse JMdict or it is not an array")
 }
 
-let idSet = new Map<string, boolean>()
-traverseJmdict(null, new Node("root", jmdict.entry), (parentNode, node) => {
+let  schemasInfo : SchemaInfos = new Map<string, Set<string>>()
+traverseJmdict(null, new Node("root", jmdict), (parentNode, node) => {
     if (parentNode !== null) {
         parentNode.push(node.id, node)
     }
-    console.table(`Processing entry \t ${node.getFullId().join('_')} \t\t\t\t ${node.type}`)
+    const fullId = node.getFullId().join(SEPARATOR)
+    if(!schemasInfo.has(fullId)) 
+        schemasInfo.set(fullId, new Set<string>())
+
+    let set = schemasInfo.get(fullId)
+    if(typeof set == 'undefined'
+        || set === null) 
+        return
+    set.add(node.type)
 })
+
+const table: { fullId: string; types: string }[] = []
+schemasInfo.forEach((types, fullId) => {
+    table.push({
+        fullId: fullId,
+        types: types.values().toArray().join(SEPARATOR)
+    })
+})  
+console.table(table)
 exit(0)
 
+let idSet = new Map<string, boolean>()
 if (idSet.size === 0) {
     throw new Error("No entries found in JMdict")
 }
@@ -63,3 +81,5 @@ function writeRootSchema(id : string, hasValue : boolean) {
     writeStream.write(`\n`)
     writeStream.write(`\n`)
 }
+
+type SchemaInfos = Map<string, Set<string>>

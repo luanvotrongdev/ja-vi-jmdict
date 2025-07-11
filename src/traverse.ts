@@ -74,7 +74,8 @@ export class Node {
 
     private _getFullId(idStacks: string[]): string[]
     {
-        idStacks.push(this.id)
+        if(this.type !== 'array')
+            idStacks.push(this.id)
 
         if(this.parent === null)
             return idStacks.filter(x=>x.length > 0).reverse()
