@@ -3,189 +3,179 @@
 
 import { int, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-export const entry = sqliteTable('entry', {
+export const k_ele = sqliteTable('k_ele', {
     id: int().primaryKey(),
     name: text('name'),
 })
 
 
-export const entry_ent_seq = sqliteTable('entry_ent_seq', {
-    id: int().primaryKey(),
-    name: text('name'),
-})
-
-
-export const entry_r_ele = sqliteTable('entry_r_ele', {
-    id: int().primaryKey(),
-    name: text('name'),
-})
-
-
-export const entry_r_ele_reb = sqliteTable('entry_r_ele_reb', {
+export const k_ele_ke_inf = sqliteTable('k_ele_ke_inf', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense = sqliteTable('entry_sense', {
-    id: int().primaryKey(),
-    name: text('name'),
-})
-
-
-export const entry_sense_pos = sqliteTable('entry_sense_pos', {
+export const k_ele_ke_pri = sqliteTable('k_ele_ke_pri', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_xref = sqliteTable('entry_sense_xref', {
+export const k_ele_keb = sqliteTable('k_ele_keb', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_gloss = sqliteTable('entry_sense_gloss', {
+export const r_ele = sqliteTable('r_ele', {
+    id: int().primaryKey(),
+    name: text('name'),
+})
+
+
+export const r_ele_re_inf = sqliteTable('r_ele_re_inf', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_k_ele = sqliteTable('entry_k_ele', {
-    id: int().primaryKey(),
-    name: text('name'),
-})
-
-
-export const entry_k_ele_keb = sqliteTable('entry_k_ele_keb', {
+export const r_ele_re_nokanji = sqliteTable('r_ele_re_nokanji', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_r_ele_re_nokanji = sqliteTable('entry_r_ele_re_nokanji', {
+export const r_ele_re_pri = sqliteTable('r_ele_re_pri', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_s_inf = sqliteTable('entry_sense_s_inf', {
+export const r_ele_re_restr = sqliteTable('r_ele_re_restr', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_k_ele_ke_pri = sqliteTable('entry_k_ele_ke_pri', {
+export const r_ele_reb = sqliteTable('r_ele_reb', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_r_ele_re_restr = sqliteTable('entry_r_ele_re_restr', {
+export const sense = sqliteTable('sense', {
+    id: int().primaryKey(),
+    name: text('name'),
+})
+
+
+export const sense_ant = sqliteTable('sense_ant', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_r_ele_re_pri = sqliteTable('entry_r_ele_re_pri', {
+export const sense_dial = sqliteTable('sense_dial', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_example = sqliteTable('entry_sense_example', {
-    id: int().primaryKey(),
-    name: text('name'),
-})
-
-
-export const entry_sense_example_ex_srce = sqliteTable('entry_sense_example_ex_srce', {
-    id: int().primaryKey(),
-    name: text('name'),
-})
-
-
-export const entry_sense_example_ex_text = sqliteTable('entry_sense_example_ex_text', {
+export const sense_example = sqliteTable('sense_example', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_example_ex_sent = sqliteTable('entry_sense_example_ex_sent', {
+export const sense_example_ex_sent = sqliteTable('sense_example_ex_sent', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_misc = sqliteTable('entry_sense_misc', {
+export const sense_example_ex_srce = sqliteTable('sense_example_ex_srce', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_k_ele_ke_inf = sqliteTable('entry_k_ele_ke_inf', {
+export const sense_example_ex_text = sqliteTable('sense_example_ex_text', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_r_ele_re_inf = sqliteTable('entry_r_ele_re_inf', {
+export const sense_field = sqliteTable('sense_field', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_dial = sqliteTable('entry_sense_dial', {
+export const sense_gloss = sqliteTable('sense_gloss', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_stagk = sqliteTable('entry_sense_stagk', {
+export const sense_lsource = sqliteTable('sense_lsource', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_stagr = sqliteTable('entry_sense_stagr', {
+export const sense_misc = sqliteTable('sense_misc', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_field = sqliteTable('entry_sense_field', {
+export const sense_pos = sqliteTable('sense_pos', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_lsource = sqliteTable('entry_sense_lsource', {
+export const sense_s_inf = sqliteTable('sense_s_inf', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),
 })
 
 
-export const entry_sense_ant = sqliteTable('entry_sense_ant', {
+export const sense_stagk = sqliteTable('sense_stagk', {
+    id: int().primaryKey(),
+    value: text(),
+    name: text('name'),
+})
+
+
+export const sense_stagr = sqliteTable('sense_stagr', {
+    id: int().primaryKey(),
+    value: text(),
+    name: text('name'),
+})
+
+
+export const sense_xref = sqliteTable('sense_xref', {
     id: int().primaryKey(),
     value: text(),
     name: text('name'),

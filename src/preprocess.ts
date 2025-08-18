@@ -32,18 +32,46 @@ traverseJmdict(null, new Node("root", jmdict), (parentNode, node) => {
 })
 schemasInfoSet.delete("")
 
-const schemaTables: { fullId: string; types: string }[] = []
+const schemasTable: { fullId: string; types: string }[] = []
 schemasInfoSet.forEach((types, fullId) => {
-    schemaTables.push({
+    schemasTable.push({
         fullId: fullId,
         types: types.values().toArray().join(SEPARATOR)
     })
 })  
-schemaTables.sort((a, b) => a.fullId.localeCompare(b.fullId))
-console.table(schemaTables)
-exit(0)
+schemasTable.sort((a, b) => a.fullId.localeCompare(b.fullId))
+console.table(schemasTable)
+
+if(schemasInfoSet.size === 0) {
+    console.error("No entries found in JMdict")
+    exit(1)
+}
+
+let maxLevel = 0
+schemasInfoSet.forEach((_, fullId) => {
+    let level = fullId.split(SEPARATOR).length
+    if (level > maxLevel) {
+        maxLevel = level
+    }
+})
+
 
 let idSet = new Map<string, boolean>()
+for(let level = 1; level < maxLevel; level++) {
+    const childLevel = level + 1
+    schemasTable.forEach((entry) => {
+        const parts = entry.fullId.split(SEPARATOR)
+        if (parts.length <= childLevel) return
+        const parentId = parts.slice(0, childLevel).join(SEPARATOR)
+        const id = parts.slice(childLevel).join(SEPARATOR)
+        if (!idSet.has(parentId)) {
+            idSet.set(parentId, false)
+        }
+        if (!idSet.has(entry.fullId)) {
+            idSet.set(entry.fullId, true)
+        }
+    })
+}
 if (idSet.size === 0) {
     throw new Error("No entries found in JMdict")
 }
