@@ -1,11 +1,90 @@
 import fs from 'fs'
 import { exit } from 'process'
-import { 
-    getJmdict, 
+import {
+    getJmdict,
     traverseJmdict,
     SEPARATOR,
     Node
 } from "traverse"
+
+type TreeNode = {
+  fullId: string;
+  types: string;
+  level: number;
+  children: TreeNode[];
+}
+
+function buildTree(schemasInfoSet: SchemaInfos): TreeNode {
+  const nodeMap = new Map<string, TreeNode>();
+  const root: TreeNode = { fullId: '', types: '', level: 0, children: [] };
+  nodeMap.set('', root);
+  schemasInfoSet.forEach((types, fullId) => {
+    const level = fullId.split(SEPARATOR).length;
+    const node: TreeNode = { fullId, types: Array.from(types.values()).join(SEPARATOR), level, children: [] };
+    nodeMap.set(fullId, node);
+    const parts = fullId.split(SEPARATOR);
+    const parentId = parts.slice(0, -1).join(SEPARATOR) || '';
+    const parent = nodeMap.get(parentId);
+    if (parent) {
+      parent.children.push(node);
+    }
+  });
+  return root;
+}
+
+function getMaxLevel(tree: TreeNode): number {
+  let max = 0;
+  function traverse(node: TreeNode, level: number) {
+    max = Math.max(max, level);
+    node.children.forEach(child => traverse(child, level + 1));
+  }
+  tree.children.forEach(child => traverse(child, 1));
+  return max;
+}
+
+function buildIdSet(tree: TreeNode): Map<string, boolean> {
+  const idSet = new Map<string, boolean>();
+  function traverse(node: TreeNode) {
+    if (node.fullId === '') return;
+    if (node.children.length === 0) {
+      idSet.set(node.fullId, true);
+    } else {
+      idSet.set(node.fullId, false);
+      node.children.forEach(traverse);
+    }
+  }
+  tree.children.forEach(traverse);
+  return idSet;
+}
+
+function buildIdsByLevel(tree: TreeNode): Map<number, Array<{key: string, id: string, hasValue: boolean}>> {
+  const idsByLevel = new Map<number, Array<{key: string, id: string, hasValue: boolean}>>()
+  function traverse(node: TreeNode) {
+    if (node.fullId === '') return;
+    const parts = node.fullId.split(SEPARATOR)
+    const id = parts.slice(1).join('_')
+    const hasValue = node.children.length === 0
+    const level = parts.length
+    if (!idsByLevel.has(level)) {
+      idsByLevel.set(level, [])
+    }
+    idsByLevel.get(level)?.push({key: node.fullId, id, hasValue})
+    node.children.forEach(traverse)
+  }
+  tree.children.forEach(traverse)
+  return idsByLevel
+}
+
+function printTree(tree: TreeNode, indent: string = ''): void {
+  if (tree.fullId === '') {
+    console.log('Root');
+  } else {
+    console.log(`${indent}${tree.fullId} (level: ${tree.level}, types: ${tree.types})`);
+  }
+  tree.children.forEach(child => {
+    printTree(child, indent + '  ');
+  });
+}
 
 let jmdict = await getJmdict()
 if (!jmdict) {
@@ -32,46 +111,20 @@ traverseJmdict(null, new Node("root", jmdict), (parentNode, node) => {
 })
 schemasInfoSet.delete("")
 
-const schemasTable: { fullId: string; types: string }[] = []
-schemasInfoSet.forEach((types, fullId) => {
-    schemasTable.push({
-        fullId: fullId,
-        types: types.values().toArray().join(SEPARATOR)
-    })
-})  
-schemasTable.sort((a, b) => a.fullId.localeCompare(b.fullId))
-console.table(schemasTable)
+const tree = buildTree(schemasInfoSet);
+console.log('Tree built with', tree.children.length, 'top level nodes');
+console.log('\nTree structure:');
+printTree(tree);
 
 if(schemasInfoSet.size === 0) {
     console.error("No entries found in JMdict")
     exit(1)
 }
 
-let maxLevel = 0
-schemasInfoSet.forEach((_, fullId) => {
-    let level = fullId.split(SEPARATOR).length
-    if (level > maxLevel) {
-        maxLevel = level
-    }
-})
+let maxLevel = getMaxLevel(tree);
 
 
-let idSet = new Map<string, boolean>()
-for(let level = 1; level < maxLevel; level++) {
-    const childLevel = level + 1
-    schemasTable.forEach((entry) => {
-        const parts = entry.fullId.split(SEPARATOR)
-        if (parts.length <= childLevel) return
-        const parentId = parts.slice(0, childLevel).join(SEPARATOR)
-        const id = parts.slice(childLevel).join(SEPARATOR)
-        if (!idSet.has(parentId)) {
-            idSet.set(parentId, false)
-        }
-        if (!idSet.has(entry.fullId)) {
-            idSet.set(entry.fullId, true)
-        }
-    })
-}
+const idSet = buildIdSet(tree);
 if (idSet.size === 0) {
     throw new Error("No entries found in JMdict")
 }
@@ -90,29 +143,42 @@ writeStream.write(`\n`)
 writeStream.write(`import { int, sqliteTable, text } from 'drizzle-orm/sqlite-core'\n`)
 writeStream.write(`\n`)
 
-idSet.keys().forEach((key) => {
-    let parts = key.split(SEPARATOR)
-    let id = parts.splice(1, parts.length - 1).join('_')
-    let hasValue = idSet.get(key) ?? false
-    writeRootSchema(id, hasValue)
-})
+// Group IDs by level
+const idsByLevel = buildIdsByLevel(tree)
+
+// Write schemas grouped by level
+writeRootSchema(idsByLevel)
 writeStream.end()
 
-function writeRootSchema(id : string, hasValue : boolean) {
-    const lenght = id.split(SEPARATOR).length
-    writeStream.write(`export const ${id} = sqliteTable('${id}', {\n`)
-    writeStream.write(`    id: int().primaryKey(),\n`)
-    if(hasValue) {
-        writeStream.write(`    value: text(),\n`)
-    }
-    if(lenght > 1) {
-        let parentId = id.split('_').slice(0, id.length - 2).join('_')
-        writeStream.write(`    parentId: int().references(() => ${parentId}.id),\n`)
-    }
-    writeStream.write(`    name: text('name'),\n`)
-    writeStream.write(`})\n`)
-    writeStream.write(`\n`)
-    writeStream.write(`\n`)
+function writeRootSchema(idsByLevel: Map<number, Array<{key: string, id: string, hasValue: boolean}>>) {
+    // Sort levels to ensure proper order
+    const sortedLevels = Array.from(idsByLevel.keys()).sort((a, b) => a - b)
+    
+    sortedLevels.forEach(level => {
+        const idsAtLevel = idsByLevel.get(level) || []
+        
+        // Write comment for level grouping
+        writeStream.write(`// Level ${level} schemas\n`)
+        
+        idsAtLevel.forEach(({key, id, hasValue}) => {
+            const length = id.split('_').length
+            writeStream.write(`export const ${id} = sqliteTable('${id}', {\n`)
+            writeStream.write(`    id: int().primaryKey(),\n`)
+            if(hasValue) {
+                writeStream.write(`    value: text(),\n`)
+            }
+            if(length > 0) {
+                let parentId = id.split('_').slice(0, -1).join('_')
+                if(parentId) {
+                    writeStream.write(`    parentId: int().references(() => ${parentId}.id),\n`)
+                }
+            }
+            writeStream.write(`    name: text('name'),\n`)
+            writeStream.write(`})\n`)
+            writeStream.write(`\n`)
+        })
+        writeStream.write(`\n`)
+    })
 }
 
 type SchemaInfos = Map<string, Set<string>>

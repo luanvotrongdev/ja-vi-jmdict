@@ -3,181 +3,199 @@
 
 import { int, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-export const k_ele = sqliteTable('k_ele', {
+// Level 1 schemas
+export const  = sqliteTable('', {
     id: int().primaryKey(),
     name: text('name'),
 })
 
 
-export const k_ele_ke_inf = sqliteTable('k_ele_ke_inf', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
-
-export const k_ele_ke_pri = sqliteTable('k_ele_ke_pri', {
+// Level 2 schemas
+export const ent_seq = sqliteTable('ent_seq', {
     id: int().primaryKey(),
     value: text(),
+    parentId: int().references(() => ent.id),
     name: text('name'),
 })
-
-
-export const k_ele_keb = sqliteTable('k_ele_keb', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
 
 export const r_ele = sqliteTable('r_ele', {
     id: int().primaryKey(),
+    parentId: int().references(() => r.id),
     name: text('name'),
 })
-
-
-export const r_ele_re_inf = sqliteTable('r_ele_re_inf', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
-
-export const r_ele_re_nokanji = sqliteTable('r_ele_re_nokanji', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
-
-export const r_ele_re_pri = sqliteTable('r_ele_re_pri', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
-
-export const r_ele_re_restr = sqliteTable('r_ele_re_restr', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
-
-export const r_ele_reb = sqliteTable('r_ele_reb', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
 
 export const sense = sqliteTable('sense', {
     id: int().primaryKey(),
     name: text('name'),
 })
 
-
-export const sense_ant = sqliteTable('sense_ant', {
+export const k_ele = sqliteTable('k_ele', {
     id: int().primaryKey(),
-    value: text(),
+    parentId: int().references(() => k.id),
     name: text('name'),
 })
 
 
-export const sense_dial = sqliteTable('sense_dial', {
+// Level 3 schemas
+export const r_ele_reb = sqliteTable('r_ele_reb', {
     id: int().primaryKey(),
     value: text(),
+    parentId: int().references(() => r_ele.id),
     name: text('name'),
 })
 
-
-export const sense_example = sqliteTable('sense_example', {
+export const r_ele_re_nokanji = sqliteTable('r_ele_re_nokanji', {
     id: int().primaryKey(),
     value: text(),
+    parentId: int().references(() => r_ele_re.id),
     name: text('name'),
 })
 
-
-export const sense_example_ex_sent = sqliteTable('sense_example_ex_sent', {
+export const r_ele_re_restr = sqliteTable('r_ele_re_restr', {
     id: int().primaryKey(),
     value: text(),
+    parentId: int().references(() => r_ele_re.id),
     name: text('name'),
 })
 
-
-export const sense_example_ex_srce = sqliteTable('sense_example_ex_srce', {
+export const r_ele_re_pri = sqliteTable('r_ele_re_pri', {
     id: int().primaryKey(),
     value: text(),
+    parentId: int().references(() => r_ele_re.id),
     name: text('name'),
 })
 
-
-export const sense_example_ex_text = sqliteTable('sense_example_ex_text', {
+export const r_ele_re_inf = sqliteTable('r_ele_re_inf', {
     id: int().primaryKey(),
     value: text(),
+    parentId: int().references(() => r_ele_re.id),
     name: text('name'),
 })
-
-
-export const sense_field = sqliteTable('sense_field', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
-
-export const sense_gloss = sqliteTable('sense_gloss', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
-
-export const sense_lsource = sqliteTable('sense_lsource', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
-
-export const sense_misc = sqliteTable('sense_misc', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
 
 export const sense_pos = sqliteTable('sense_pos', {
     id: int().primaryKey(),
     value: text(),
+    parentId: int().references(() => sense.id),
     name: text('name'),
 })
-
-
-export const sense_s_inf = sqliteTable('sense_s_inf', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
-
-export const sense_stagk = sqliteTable('sense_stagk', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
-
-export const sense_stagr = sqliteTable('sense_stagr', {
-    id: int().primaryKey(),
-    value: text(),
-    name: text('name'),
-})
-
 
 export const sense_xref = sqliteTable('sense_xref', {
     id: int().primaryKey(),
     value: text(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
+export const sense_gloss = sqliteTable('sense_gloss', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
+export const sense_s_inf = sqliteTable('sense_s_inf', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense_s.id),
+    name: text('name'),
+})
+
+export const sense_example = sqliteTable('sense_example', {
+    id: int().primaryKey(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
+export const sense_misc = sqliteTable('sense_misc', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
+export const sense_dial = sqliteTable('sense_dial', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
+export const sense_stagk = sqliteTable('sense_stagk', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
+export const sense_stagr = sqliteTable('sense_stagr', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
+export const sense_field = sqliteTable('sense_field', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
+export const sense_lsource = sqliteTable('sense_lsource', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
+export const sense_ant = sqliteTable('sense_ant', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
+export const k_ele_keb = sqliteTable('k_ele_keb', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => k_ele.id),
+    name: text('name'),
+})
+
+export const k_ele_ke_pri = sqliteTable('k_ele_ke_pri', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => k_ele_ke.id),
+    name: text('name'),
+})
+
+export const k_ele_ke_inf = sqliteTable('k_ele_ke_inf', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => k_ele_ke.id),
+    name: text('name'),
+})
+
+
+// Level 4 schemas
+export const sense_example_ex_srce = sqliteTable('sense_example_ex_srce', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense_example_ex.id),
+    name: text('name'),
+})
+
+export const sense_example_ex_text = sqliteTable('sense_example_ex_text', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense_example_ex.id),
+    name: text('name'),
+})
+
+export const sense_example_ex_sent = sqliteTable('sense_example_ex_sent', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense_example_ex.id),
     name: text('name'),
 })
 
