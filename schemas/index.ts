@@ -18,6 +18,12 @@ export const ent_seq = sqliteTable('ent_seq', {
     name: text('name'),
 })
 
+export const k_ele = sqliteTable('k_ele', {
+    id: int().primaryKey(),
+    parentId: int().references(() => k.id),
+    name: text('name'),
+})
+
 export const r_ele = sqliteTable('r_ele', {
     id: int().primaryKey(),
     parentId: int().references(() => r.id),
@@ -29,18 +35,40 @@ export const sense = sqliteTable('sense', {
     name: text('name'),
 })
 
-export const k_ele = sqliteTable('k_ele', {
+
+// Level 3 schemas
+export const k_ele_keb = sqliteTable('k_ele_keb', {
     id: int().primaryKey(),
-    parentId: int().references(() => k.id),
+    value: text(),
+    parentId: int().references(() => k_ele.id),
     name: text('name'),
 })
 
+export const k_ele_ke_inf = sqliteTable('k_ele_ke_inf', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => k_ele_ke.id),
+    name: text('name'),
+})
 
-// Level 3 schemas
+export const k_ele_ke_pri = sqliteTable('k_ele_ke_pri', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => k_ele_ke.id),
+    name: text('name'),
+})
+
 export const r_ele_reb = sqliteTable('r_ele_reb', {
     id: int().primaryKey(),
     value: text(),
     parentId: int().references(() => r_ele.id),
+    name: text('name'),
+})
+
+export const r_ele_re_pri = sqliteTable('r_ele_re_pri', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => r_ele_re.id),
     name: text('name'),
 })
 
@@ -52,13 +80,6 @@ export const r_ele_re_nokanji = sqliteTable('r_ele_re_nokanji', {
 })
 
 export const r_ele_re_restr = sqliteTable('r_ele_re_restr', {
-    id: int().primaryKey(),
-    value: text(),
-    parentId: int().references(() => r_ele_re.id),
-    name: text('name'),
-})
-
-export const r_ele_re_pri = sqliteTable('r_ele_re_pri', {
     id: int().primaryKey(),
     value: text(),
     parentId: int().references(() => r_ele_re.id),
@@ -86,6 +107,13 @@ export const sense_xref = sqliteTable('sense_xref', {
     name: text('name'),
 })
 
+export const sense_misc = sqliteTable('sense_misc', {
+    id: int().primaryKey(),
+    value: text(),
+    parentId: int().references(() => sense.id),
+    name: text('name'),
+})
+
 export const sense_gloss = sqliteTable('sense_gloss', {
     id: int().primaryKey(),
     value: text(),
@@ -93,22 +121,8 @@ export const sense_gloss = sqliteTable('sense_gloss', {
     name: text('name'),
 })
 
-export const sense_s_inf = sqliteTable('sense_s_inf', {
-    id: int().primaryKey(),
-    value: text(),
-    parentId: int().references(() => sense_s.id),
-    name: text('name'),
-})
-
 export const sense_example = sqliteTable('sense_example', {
     id: int().primaryKey(),
-    parentId: int().references(() => sense.id),
-    name: text('name'),
-})
-
-export const sense_misc = sqliteTable('sense_misc', {
-    id: int().primaryKey(),
-    value: text(),
     parentId: int().references(() => sense.id),
     name: text('name'),
 })
@@ -120,17 +134,17 @@ export const sense_dial = sqliteTable('sense_dial', {
     name: text('name'),
 })
 
-export const sense_stagk = sqliteTable('sense_stagk', {
+export const sense_stagr = sqliteTable('sense_stagr', {
     id: int().primaryKey(),
     value: text(),
     parentId: int().references(() => sense.id),
     name: text('name'),
 })
 
-export const sense_stagr = sqliteTable('sense_stagr', {
+export const sense_s_inf = sqliteTable('sense_s_inf', {
     id: int().primaryKey(),
     value: text(),
-    parentId: int().references(() => sense.id),
+    parentId: int().references(() => sense_s.id),
     name: text('name'),
 })
 
@@ -148,31 +162,17 @@ export const sense_lsource = sqliteTable('sense_lsource', {
     name: text('name'),
 })
 
-export const sense_ant = sqliteTable('sense_ant', {
+export const sense_stagk = sqliteTable('sense_stagk', {
     id: int().primaryKey(),
     value: text(),
     parentId: int().references(() => sense.id),
     name: text('name'),
 })
 
-export const k_ele_keb = sqliteTable('k_ele_keb', {
+export const sense_ant = sqliteTable('sense_ant', {
     id: int().primaryKey(),
     value: text(),
-    parentId: int().references(() => k_ele.id),
-    name: text('name'),
-})
-
-export const k_ele_ke_pri = sqliteTable('k_ele_ke_pri', {
-    id: int().primaryKey(),
-    value: text(),
-    parentId: int().references(() => k_ele_ke.id),
-    name: text('name'),
-})
-
-export const k_ele_ke_inf = sqliteTable('k_ele_ke_inf', {
-    id: int().primaryKey(),
-    value: text(),
-    parentId: int().references(() => k_ele_ke.id),
+    parentId: int().references(() => sense.id),
     name: text('name'),
 })
 

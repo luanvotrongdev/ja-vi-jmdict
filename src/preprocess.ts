@@ -1,11 +1,12 @@
 import fs from 'fs'
 import { exit } from 'process'
 import {
-    getJmdict,
     traverseJmdict,
-    SEPARATOR,
     Node
 } from "traverse"
+import {
+    getJmdict
+} from "parser"
 
 type TreeNode = {
   fullId: string;
@@ -14,120 +15,126 @@ type TreeNode = {
   children: TreeNode[];
 }
 
-function buildTree(schemasInfoSet: SchemaInfos): TreeNode {
-  const nodeMap = new Map<string, TreeNode>();
-  const root: TreeNode = { fullId: '', types: '', level: 0, children: [] };
-  nodeMap.set('', root);
-  schemasInfoSet.forEach((types, fullId) => {
-    const level = fullId.split(SEPARATOR).length;
-    const node: TreeNode = { fullId, types: Array.from(types.values()).join(SEPARATOR), level, children: [] };
-    nodeMap.set(fullId, node);
-    const parts = fullId.split(SEPARATOR);
-    const parentId = parts.slice(0, -1).join(SEPARATOR) || '';
-    const parent = nodeMap.get(parentId);
-    if (parent) {
-      parent.children.push(node);
-    }
-  });
-  return root;
-}
+// function buildTree(schemasInfoSet: SchemaInfos): TreeNode {
+//   const nodeMap = new Map<string, TreeNode>();
+//   const root: TreeNode = { fullId: '', types: '', level: 0, children: [] };
+//   nodeMap.set('', root);
+//   schemasInfoSet.forEach((types, fullId) => {
+//     const level = fullId.split(SEPARATOR).length;
+//     const node: TreeNode = { fullId, types: Array.from(types.values()).join(SEPARATOR), level, children: [] };
+//     nodeMap.set(fullId, node);
+//     const parts = fullId.split(SEPARATOR);
+//     const parentId = parts.slice(0, -1).join(SEPARATOR) || '';
+//     const parent = nodeMap.get(parentId);
+//     if (parent) {
+//       parent.children.push(node);
+//     }
+//   });
+//   return root;
+// }
 
-function getMaxLevel(tree: TreeNode): number {
-  let max = 0;
-  function traverse(node: TreeNode, level: number) {
-    max = Math.max(max, level);
-    node.children.forEach(child => traverse(child, level + 1));
-  }
-  tree.children.forEach(child => traverse(child, 1));
-  return max;
-}
+// function getMaxLevel(tree: TreeNode): number {
+//   let max = 0;
+//   function traverse(node: TreeNode, level: number) {
+//     max = Math.max(max, level);
+//     node.children.forEach(child => traverse(child, level + 1));
+//   }
+//   tree.children.forEach(child => traverse(child, 1));
+//   return max;
+// }
 
-function buildIdSet(tree: TreeNode): Map<string, boolean> {
-  const idSet = new Map<string, boolean>();
-  function traverse(node: TreeNode) {
-    if (node.fullId === '') return;
-    if (node.children.length === 0) {
-      idSet.set(node.fullId, true);
-    } else {
-      idSet.set(node.fullId, false);
-      node.children.forEach(traverse);
-    }
-  }
-  tree.children.forEach(traverse);
-  return idSet;
-}
+// function buildIdSet(tree: TreeNode): Map<string, boolean> {
+//   const idSet = new Map<string, boolean>();
+//   function traverse(node: TreeNode) {
+//     if (node.fullId === '') return;
+//     if (node.children.length === 0) {
+//       idSet.set(node.fullId, true);
+//     } else {
+//       idSet.set(node.fullId, false);
+//       node.children.forEach(traverse);
+//     }
+//   }
+//   tree.children.forEach(traverse);
+//   return idSet;
+// }
 
-function buildIdsByLevel(tree: TreeNode): Map<number, Array<{key: string, id: string, hasValue: boolean}>> {
-  const idsByLevel = new Map<number, Array<{key: string, id: string, hasValue: boolean}>>()
-  function traverse(node: TreeNode) {
-    if (node.fullId === '') return;
-    const parts = node.fullId.split(SEPARATOR)
-    const id = parts.slice(1).join('_')
-    const hasValue = node.children.length === 0
-    const level = parts.length
-    if (!idsByLevel.has(level)) {
-      idsByLevel.set(level, [])
-    }
-    idsByLevel.get(level)?.push({key: node.fullId, id, hasValue})
-    node.children.forEach(traverse)
-  }
-  tree.children.forEach(traverse)
-  return idsByLevel
-}
+// function buildIdsByLevel(tree: TreeNode): Map<number, Array<{key: string, id: string, hasValue: boolean}>> {
+//   const idsByLevel = new Map<number, Array<{key: string, id: string, hasValue: boolean}>>()
+//   function traverse(node: TreeNode) {
+//     if (node.fullId === '') return;
+//     const parts = node.fullId.split(SEPARATOR)
+//     const id = parts.slice(1).join('_')
+//     const hasValue = node.children.length === 0
+//     const level = parts.length
+//     if (!idsByLevel.has(level)) {
+//       idsByLevel.set(level, [])
+//     }
+//     idsByLevel.get(level)?.push({key: node.fullId, id, hasValue})
+//     node.children.forEach(traverse)
+//   }
+//   tree.children.forEach(traverse)
+//   return idsByLevel
+// }
 
-function printTree(tree: TreeNode, indent: string = ''): void {
-  if (tree.fullId === '') {
-    console.log('Root');
-  } else {
-    console.log(`${indent}${tree.fullId} (level: ${tree.level}, types: ${tree.types})`);
-  }
-  tree.children.forEach(child => {
-    printTree(child, indent + '  ');
-  });
-}
+// function printTree(tree: TreeNode, indent: string = ''): void {
+//   if (tree.fullId === '') {
+//     console.log('Root');
+//   } else {
+//     console.log(`${indent}${tree.fullId} (level: ${tree.level}, types: ${tree.types})`);
+//   }
+//   tree.children.forEach(child => {
+//     printTree(child, indent + '  ');
+//   });
+// }
 
+
+
+// function onNodeTraverse(parentNode: Node | null, node: Node) {
+//     if (parentNode !== null) {
+//         parentNode.push(node.id, node)
+//     }
+//     const nodeIds = node.getFullId()
+//     const fullId = nodeIds
+//                     .splice(1, nodeIds.length-1)
+//                     .join(SEPARATOR)
+//     if(!schemasInfoSet.has(fullId)) 
+//         schemasInfoSet.set(fullId, new Set<string>())
+
+//     let set = schemasInfoSet.get(fullId)
+//     if(typeof set == 'undefined'
+//         || set === null) 
+//         return
+//     set.add(node.type)
+// }
+
+// const  schemasInfoSet : SchemaInfos = new Map<string, Set<string>>()
+// traverseJmdict(null, new Node("root", jmdict), )
+// schemasInfoSet.delete("")
+
+// const tree = buildTree(schemasInfoSet);
+// console.log('Tree built with', tree.children.length, 'top level nodes');
+// console.log('\nTree structure:');
+// printTree(tree);
+
+// if(schemasInfoSet.size === 0) {
+//     console.error("No entries found in JMdict")
+//     exit(1)
+// }
+
+// let maxLevel = getMaxLevel(tree);
+
+
+// const idSet = buildIdSet(tree);
+// if (idSet.size === 0) {
+//     throw new Error("No entries found in JMdict")
+// }
 let jmdict = await getJmdict()
 if (!jmdict) {
     throw new Error("Failed to parse JMdict or it is not an array")
 }
 
-const  schemasInfoSet : SchemaInfos = new Map<string, Set<string>>()
-traverseJmdict(null, new Node("root", jmdict), (parentNode, node) => {
-    if (parentNode !== null) {
-        parentNode.push(node.id, node)
-    }
-    const nodeIds = node.getFullId()
-    const fullId = nodeIds
-                    .splice(1, nodeIds.length-1)
-                    .join(SEPARATOR)
-    if(!schemasInfoSet.has(fullId)) 
-        schemasInfoSet.set(fullId, new Set<string>())
-
-    let set = schemasInfoSet.get(fullId)
-    if(typeof set == 'undefined'
-        || set === null) 
-        return
-    set.add(node.type)
-})
-schemasInfoSet.delete("")
-
-const tree = buildTree(schemasInfoSet);
-console.log('Tree built with', tree.children.length, 'top level nodes');
-console.log('\nTree structure:');
-printTree(tree);
-
-if(schemasInfoSet.size === 0) {
-    console.error("No entries found in JMdict")
-    exit(1)
-}
-
-let maxLevel = getMaxLevel(tree);
-
-
-const idSet = buildIdSet(tree);
-if (idSet.size === 0) {
-    throw new Error("No entries found in JMdict")
-}
+traverseJmdict(["root"], jmdict)
+exit(1)
 
 if(fs.existsSync(`${process.cwd()}/schemas`)) {
     fs.rmSync(`${process.cwd()}/schemas`, { recursive: true, force: true })

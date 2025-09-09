@@ -1,45 +1,45 @@
-import { XMLParser } from 'fast-xml-parser'
-import fs from 'fs'
-import { cwd } from 'process'
+export class SchemaNode
+{
+    public parent : SchemaNode | null = null
+    public id : string
+    public children : SchemaNode[] = []
 
-export const SEPARATOR = '||'
+    public constructor(id:string)
+    {
+        this.id = id
+    }
 
-export type TraverseFunction = (parentNode: Node | null, node: Node) => void
+    public addChild(childId : string)
+    {
+        for(var i=0;i<this.children.length;i++)
+        {
+            if(this.children[i]?.id !== childId) continue
+            return
+        }
 
-export async function getJmdict(): Promise<any> {
-    console.log('Parsing JMdict to SQLite raw...')
-    const bufferXML = fs.readFileSync(`${cwd()}/${process.env.JMDICT_FILE_NAME}`)
-    const parser = new XMLParser({
-        htmlEntities: true,
-        processEntities: true
-    })
-    let jObj = parser.parse(bufferXML)
-    console.log('Done parsing JMdict to SQLite raw!')
-
-    return jObj.JMdict
+        const child= new SchemaNode(childId)
+        child.parent = this
+        this.children.push(child)
+    }
 }
 
 export function traverseJmdict(
-    parentNode: Node | null,
-    node : Node,
-    callback: TraverseFunction
+    keyList: string[],
+    jmdict: any
 ): void {
-    callback(parentNode, node)
-    if (node.type ==='object') {
-        let keys = Object.keys(node.value)
-        keys.forEach(key => {
-           traverseJmdict(node, 
-            new Node(key, node.value[key]), 
-            callback) 
+    if(typeof jmdict === "string") return
+    if (Array.isArray(jmdict)) {
+       console.log(keyList.join('||') + " [array]")
+        jmdict.forEach((entry: any) => {
+            traverseJmdict(keyList, entry)
         })
         return
     }
-    if(node.type === 'array')
-    {
-        node.value.forEach((entry : any) => {
-            traverseJmdict(node, 
-                new Node(node.id, entry), 
-                callback)
+    if (typeof jmdict === 'object') {
+       console.log(keyList.join('||') + " [object]")
+        let keys = Object.keys(jmdict)
+        keys.forEach(key => {
+            traverseJmdict([...keyList].concat(key), jmdict[key])
         })
         return
     }
@@ -47,14 +47,14 @@ export function traverseJmdict(
 
 export class Node {
     public parent: Node | null = null
-    public children : Node[] = []
+    public children: Node[] = []
     public id: string
     public value: any
     public type: string
 
     public constructor(id: string, value: any) {
         this.id = id
-        this.value = value 
+        this.value = value
         if (Array.isArray(value)) {
             this.type = 'array'
         } else {
@@ -72,13 +72,12 @@ export class Node {
         return this._getFullId([])
     }
 
-    private _getFullId(idStacks: string[]): string[]
-    {
-        if(this.type !== 'array')
+    private _getFullId(idStacks: string[]): string[] {
+        if (this.type !== 'array')
             idStacks.push(this.id)
 
-        if(this.parent === null)
-            return idStacks.filter(x=>x.length > 0).reverse()
+        if (this.parent === null)
+            return idStacks.filter(x => x.length > 0).reverse()
 
         return this.parent._getFullId(idStacks)
     }
