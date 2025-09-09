@@ -5,6 +5,8 @@ import { int, sqliteTable } from 'drizzle-orm/sqlite-core'
 //
 //
 //
+export const table_map = new Map<string, >
+
 // Level entry schemas
 export const entry = sqliteTable('entry', {
 	id: int().primaryKey(),

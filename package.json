@@ -6,6 +6,7 @@
   "scripts": {
     "fetch": "bun run src/downloader",
     "preprocess": "bun run src/preprocess && npx drizzle-kit push",
+    "process": "bun run src/jmdcit_process",
     "parse": "bun run src/parser"
   },
   "devDependencies": {
