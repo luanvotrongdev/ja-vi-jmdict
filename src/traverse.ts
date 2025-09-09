@@ -23,25 +23,32 @@ export class SchemaNode
     }
 }
 
+export type TraverseCallback = (keyList: string[], value : string) => void
+
 export function traverseJmdict(
+    entryId: number,
     keyList: string[],
-    jmdict: any
+    jmdict: any,
+    callback : TraverseCallback | null = null
 ): void {
-    if(typeof jmdict === "string") return
+    // if(typeof jmdict === "string") return
     if (Array.isArray(jmdict)) {
-       console.log(keyList.join('||') + " [array]")
         jmdict.forEach((entry: any) => {
-            traverseJmdict(keyList, entry)
+            traverseJmdict(entryId, keyList, entry, callback)
         })
         return
     }
     if (typeof jmdict === 'object') {
-       console.log(keyList.join('||') + " [object]")
         let keys = Object.keys(jmdict)
         keys.forEach(key => {
-            traverseJmdict([...keyList].concat(key), jmdict[key])
+            traverseJmdict(entryId, [...keyList].concat(key), jmdict[key], callback)
         })
         return
+    }
+
+    if(typeof jmdict !== "string") return
+    if (callback) {
+        callback(keyList, jmdict)
     }
 }
 
