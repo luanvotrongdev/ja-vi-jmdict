@@ -5,9 +5,7 @@
   "private": true,
   "scripts": {
     "fetch": "bun run src/downloader",
-    "preprocess": "bun run src/preprocess && npx drizzle-kit push",
-    "process": "bun run src/jmdcit_process",
-    "parse": "bun run src/parser"
+    "process": "bun run src/jmdict_process"
   },
   "devDependencies": {
     "@types/bun": "1.2.17",

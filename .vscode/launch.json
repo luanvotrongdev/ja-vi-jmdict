@@ -18,21 +18,10 @@
         {
             "type": "bun",
             "request": "launch",
-            "name": "Debug Preprocess Script",
+            "name": "Debug process Script",
             "runtimeArgs": [
                 "run",
-                "src/preprocess"
-            ],
-            "cwd": "${workspaceFolder}",
-            "internalConsoleOptions": "neverOpen"
-        },
-        {
-            "type": "bun",
-            "request": "launch",
-            "name": "Debug Parse Script",
-            "runtimeArgs": [
-                "run",
-                "src/parser"
+                "src/jmdict_process"
             ],
             "cwd": "${workspaceFolder}",
             "internalConsoleOptions": "neverOpen"

@@ -76,7 +76,7 @@ function attrOf(value: RawNode, attribute: string): string | undefined {
 }
 
 export async function writeJmdictToDatabase(): Promise<void> {
-  if (!process.env.DB_FILE_NAME) {
+  if (!process.env.DB_PATH) {
     throw new Error('DB_FILE_NAME environment variable is required')
   }
 
@@ -86,10 +86,10 @@ export async function writeJmdictToDatabase(): Promise<void> {
   }
 
   const entries = toArray(jmdict.entry as RawNode)
-  const dbPath = path.isAbsolute(process.env.DB_FILE_NAME)
+  const dbPath = path.isAbsolute(process.env.DB_PATH)
     ? process.env.DB_FILE_NAME
-    : path.resolve(process.cwd(), process.env.DB_FILE_NAME)
-
+    : path.resolve(process.cwd(), process.env.DB_PATH)
+  console.log("FAFAFFAFAFA", path)
   const sqlite = new Database(dbPath, { create: true })
   sqlite.exec('PRAGMA foreign_keys = ON')
 
@@ -118,8 +118,15 @@ export async function writeJmdictToDatabase(): Promise<void> {
           return
         }
 
-        const entryResult = tx.insert(entry).values({ entSeq: entSeqValue }).run()
-        const entryId = Number(entryResult.lastInsertRowid)
+        const entryRow = tx
+          .insert(entry)
+          .values({ entSeq: entSeqValue })
+          .returning({ id: entry.id })
+          .get()
+        if (!entryRow) {
+          throw new Error('Failed to insert entry row')
+        }
+        const entryId = entryRow.id
 
         const kElements = toArray(entryRecord.k_ele as RawNode)
         kElements.forEach((ke, keIndex) => {
@@ -129,15 +136,19 @@ export async function writeJmdictToDatabase(): Promise<void> {
             return
           }
 
-          const kEleResult = tx
+          const kEleRow = tx
             .insert(kEle)
             .values({
               entryId,
               keb: kebValue,
               position: keIndex,
             })
-            .run()
-          const kEleId = Number(kEleResult.lastInsertRowid)
+            .returning({ id: kEle.id })
+            .get()
+          if (!kEleRow) {
+            throw new Error('Failed to insert k_ele row')
+          }
+          const kEleId = kEleRow.id
 
           toArray(node.ke_inf as RawNode).forEach((info, infoIndex) => {
             const infoValue = textOf(info)
@@ -178,7 +189,7 @@ export async function writeJmdictToDatabase(): Promise<void> {
             return
           }
 
-          const rEleResult = tx
+          const rEleRow = tx
             .insert(rEle)
             .values({
               entryId,
@@ -186,8 +197,12 @@ export async function writeJmdictToDatabase(): Promise<void> {
               noKanji: textOf(node.re_nokanji),
               position: reIndex,
             })
-            .run()
-          const rEleId = Number(rEleResult.lastInsertRowid)
+            .returning({ id: rEle.id })
+            .get()
+          if (!rEleRow) {
+            throw new Error('Failed to insert r_ele row')
+          }
+          const rEleId = rEleRow.id
 
           toArray(node.re_restr as RawNode).forEach((restr, restrIndex) => {
             const restrValue = textOf(restr)
@@ -238,14 +253,18 @@ export async function writeJmdictToDatabase(): Promise<void> {
         const senseNodes = toArray(entryRecord.sense as RawNode)
         senseNodes.forEach((senseNode, senseIndex) => {
           const node = senseNode as Record<string, unknown>
-          const senseResult = tx
+          const senseRow = tx
             .insert(sense)
             .values({
               entryId,
               senseIndex,
             })
-            .run()
-          const senseId = Number(senseResult.lastInsertRowid)
+            .returning({ id: sense.id })
+            .get()
+          if (!senseRow) {
+            throw new Error('Failed to insert sense row')
+          }
+          const senseId = senseRow.id
 
           toArray(node.stagk as RawNode).forEach((value, idx) => {
             const text = textOf(value)
@@ -400,7 +419,7 @@ export async function writeJmdictToDatabase(): Promise<void> {
           const glossNodes = toArray(node.gloss as RawNode)
           glossNodes.forEach((value, idx) => {
             const text = textOf(value)
-            const glossResult = tx
+            const glossRow = tx
               .insert(gloss)
               .values({
                 senseId,
@@ -410,8 +429,12 @@ export async function writeJmdictToDatabase(): Promise<void> {
                 glossType: attrOf(value, 'g_type'),
                 position: idx,
               })
-              .run()
-            const glossId = Number(glossResult.lastInsertRowid)
+              .returning({ id: gloss.id })
+              .get()
+            if (!glossRow) {
+              throw new Error('Failed to insert gloss row')
+            }
+            const glossId = glossRow.id
 
             toArray((value as Record<string, unknown>)?.pri as RawNode).forEach((pri, priIndex) => {
               const priValue = textOf(pri)
@@ -432,7 +455,7 @@ export async function writeJmdictToDatabase(): Promise<void> {
           const examples = toArray(node.example as RawNode)
           examples.forEach((exampleNode, exampleIndex) => {
             const exampleRecord = exampleNode as Record<string, unknown>
-            const exampleResult = tx
+            const exampleRow = tx
               .insert(example)
               .values({
                 senseId,
@@ -441,8 +464,12 @@ export async function writeJmdictToDatabase(): Promise<void> {
                 termText: textOf(exampleRecord.ex_text),
                 position: exampleIndex,
               })
-              .run()
-            const exampleId = Number(exampleResult.lastInsertRowid)
+              .returning({ id: example.id })
+              .get()
+            if (!exampleRow) {
+              throw new Error('Failed to insert example row')
+            }
+            const exampleId = exampleRow.id
 
             toArray(exampleRecord.ex_sent as RawNode).forEach((sentenceNode, sentenceIndex) => {
               const sentenceValue = textOf(sentenceNode)
