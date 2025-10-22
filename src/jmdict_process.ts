@@ -89,8 +89,15 @@ export async function writeJmdictToDatabase(): Promise<void> {
   const dbPath = path.isAbsolute(process.env.DB_PATH)
     ? process.env.DB_FILE_NAME
     : path.resolve(process.cwd(), process.env.DB_PATH)
-  console.log("FAFAFFAFAFA", path)
-  const sqlite = new Database(dbPath, { create: true })
+  if(!dbPath)
+  {
+    throw new Error(
+      `Database does not exist.`,
+    )
+  }
+  const sqlite = Database.open(dbPath, {
+    readwrite: true
+   })
   sqlite.exec('PRAGMA foreign_keys = ON')
 
   const hasEntryTable = sqlite
