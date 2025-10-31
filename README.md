@@ -1,5 +1,7 @@
 # ja-vi-jmdict
 
+Test with entry 1000730
+
 To install dependencies:
 
 ```bash
