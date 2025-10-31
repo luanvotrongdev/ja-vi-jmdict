@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import path from 'path'
-import { Dictionary, DictionaryIndex } from "yomichan-dict-builder";
+import { Dictionary, DictionaryIndex, TermEntry } from "yomichan-dict-builder";
 import * as schema from '../schemas'
 import { Database } from 'bun:sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
@@ -58,36 +58,64 @@ if (!hasEntryTable) {
 
 const db = drizzle(sqlite, { schema })
 
+/**
+ * @type {import('../dist/types/yomitan/termbank').StructuredContent}
+ */
+const sc = {
+    tag: 'span',
+    content: 'string',
+    data: {
+        'dict-data': 'test',
+    },
+    lang: 'ja',
+    style: {
+        fontSize: '20px',
+        fontWeight: 'normal',
+        textDecorationLine: 'overline',
+    },
+};
+
+/**
+ * @type {import('../dist/types/yomitan/termbank').DetailedDefinition}
+ */
+const detailedDefinition = {
+    type: 'structured-content',
+    content: sc,
+};
+
 async function withPagination<T extends SQLiteSelect>(
-	qb: T,
-	startId: number,
-	pageSize: number,
+    qb: T,
+    startId: number,
+    pageSize: number,
 ) {
-	return await qb.where(gt(entry.id, startId)).limit(pageSize);
+    return await qb.where(gt(rEle.id, startId)).limit(pageSize);
 }
 
-async function queryEntries()
-{
+async function queryEntries(dictionary: Dictionary) {
     const total = db.select()
         .from(entry)
         .all()
         .length
     const query = db
-                .select()
-                .from(entry)
-                .rightJoin(rEle, eq(entry.id, rEle.entryId))
-                .orderBy(entry.id)
-                .$dynamic()
+        .select()
+        .from(rEle)
+        .rightJoin(kEle, eq(rEle.entryId, kEle.entryId))
+        .rightJoin(sense, eq(rEle.entryId, sense.entryId))
+        .rightJoin(gloss, eq(sense.entryId, gloss.senseId))
+        .orderBy(rEle.entryId)
+        .$dynamic()
     var count = 0
     var countNullRele = 0
-    while(count <　total)
-    {
+    while (count < total) {
         var element = (await withPagination(query, count, 1))[0]
         count++
-        if(element == null) break
-        if(element.r_ele.reb == null || element.r_ele.reb.length == 0)
-            countNullRele++
-        console.log(`Checked: ${count}/${total} id: ${element.entry?.id} rele null: ${countNullRele}`)
+        if(element == null) continue
+        if(element.r_ele?.reb == null) continue
+        const newTerm = new TermEntry(element.r_ele?.reb)
+        if(element.gloss?.value != null)
+            newTerm.addDetailedDefinition(element.gloss?.value)
+
+        console.log(`Checked: ${count}/${total}`)
     }
 }
 
@@ -103,10 +131,9 @@ export async function buildYomitanDict() {
         .setDescription("A test dictionary for Yomitan dict")
         .setAttribution('test')
         .build()
-
-
     await dictionary.setIndex(index)
+    await queryEntries(dictionary)
     await dictionary.export()
 }
 
-queryEntries()
+await buildYomitanDict()
