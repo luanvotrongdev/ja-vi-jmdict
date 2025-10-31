@@ -2,7 +2,7 @@ export interface MaziiKanjiSearchRequest {
   /**
    * Dictionary to search against. Defaults to `'javi'` which returns Japanese → Vietnamese results.
    */
-  dict?: string
+  dict: string
   /**
    * Search type. For kanji lookups Mazii expects `'kanji'`.
    */

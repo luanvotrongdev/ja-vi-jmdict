@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "fetch": "bun run src/downloader",
-    "process": "bun run src/jmdict_process"
+    "process": "bun run src/jmdict_process",
+    "crawl": "bun run src/crawl"
   },
   "devDependencies": {
     "@types/bun": "1.2.17",

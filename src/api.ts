@@ -6,29 +6,6 @@ import type {
 
 const MAZII_KANJI_ENDPOINT = 'https://mazii.net/api/search/kanji'
 
-export interface SearchKanjiOptions {
-  /**
-   * Dictionary key supported by Mazii. Defaults to `'javi'` (Japanese → Vietnamese).
-   */
-  dict?: string
-  /**
-   * Page number (1-indexed) Mazii should return.
-   */
-  page?: number
-}
-
-function buildRequestPayload(
-  query: string,
-  { dict, page }: SearchKanjiOptions,
-): MaziiKanjiSearchRequest {
-  return {
-    dict: dict ?? 'javi',
-    type: 'kanji',
-    query,
-    page: page ?? 1,
-  }
-}
-
 function assertResponseShape(payload: unknown): asserts payload is MaziiKanjiSearchResponse {
   if (
     typeof payload !== 'object' ||
@@ -42,19 +19,18 @@ function assertResponseShape(payload: unknown): asserts payload is MaziiKanjiSea
 }
 
 export async function searchKanji(
-  query: string,
-  options: SearchKanjiOptions = {},
+  payload: MaziiKanjiSearchRequest
 ): Promise<MaziiKanjiResult[]> {
-  if (!query.trim()) {
+  if (!payload) {
     throw new Error('Mazii kanji search requires a non-empty query')
   }
 
-  const payload = buildRequestPayload(query, options)
 
   const response = await fetch(MAZII_KANJI_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
     },
     body: JSON.stringify(payload),
   })
