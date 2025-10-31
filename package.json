@@ -19,6 +19,6 @@
     "dotenv": "17.0.1",
     "drizzle-kit": "^0.31.4",
     "fast-xml-parser": "^5.2.1",
-    "yomichan-dict-builder": "^2.9.2"
+    "yomichan-dict-builder": "^2.10.0"
   }
 }
