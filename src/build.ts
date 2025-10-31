@@ -60,15 +60,14 @@ const db = drizzle(sqlite, { schema })
 
 async function withPagination<T extends SQLiteSelect>(
 	qb: T,
-	startId: number = 1,
-	pageSize: number = 10,
+	startId: number,
+	pageSize: number,
 ) {
 	return await qb.where(gt(entry.id, startId)).limit(pageSize);
 }
 
 async function queryEntries()
 {
-    const pageSize = 50
     const total = db.select()
         .from(entry)
         .all()
@@ -83,13 +82,12 @@ async function queryEntries()
     var countNullRele = 0
     while(count <　total)
     {
-        var entries = await withPagination(query, count, pageSize)
-        entries.forEach(entry=>{
-            count++
-            if(entry.r_ele.reb == null || entry.r_ele.reb.length == 0)
-                countNullRele++
-            console.log(`Checked: ${count}/${total} rele null: ${countNullRele}`)
-        })
+        var element = (await withPagination(query, count, 1))[0]
+        count++
+        if(element == null) break
+        if(element.r_ele.reb == null || element.r_ele.reb.length == 0)
+            countNullRele++
+        console.log(`Checked: ${count}/${total} id: ${element.entry?.id} rele null: ${countNullRele}`)
     }
 }
 
