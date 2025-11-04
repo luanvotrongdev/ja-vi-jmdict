@@ -15,9 +15,9 @@ const {
     gloss,
 } = schema
 
-const dbPath = path.isAbsolute(process.env.DB_PATH)
-    ? process.env.DB_FILE_NAME
-    : path.resolve(process.cwd(), process.env.DB_PATH)
+const dbPath = path.isAbsolute(process.env.DB_PATH || '')
+    ? (process.env.DB_FILE_NAME || '')
+    : path.resolve(process.cwd(), process.env.DB_PATH || '')
 if (!dbPath) {
     throw new Error(
         `Database does not exist.`,
@@ -179,7 +179,7 @@ async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number,
 
         if (entries.length === 0) break
 
-        lastEntryId = entries[entries.length - 1].id
+        lastEntryId = entries[entries.length - 1]!.id
 
         const entryIds = entries.map((row) => row.id)
         const lookups = buildLookups(entryIds);
