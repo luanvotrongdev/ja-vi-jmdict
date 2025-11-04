@@ -6,6 +6,7 @@ import { Database } from 'bun:sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { and, eq, gt, isNotNull, isNull, not } from 'drizzle-orm';
 import type { SQLiteSelect } from 'drizzle-orm/sqlite-core';
+import type { DetailedDefinition } from 'yomichan-dict-builder/dist/types/yomitan/termbank';
 
 const {
     entry,
@@ -32,21 +33,6 @@ const {
     example,
     exampleSentence,
 } = schema
-
-function withPagination<T extends SQLiteSelect>(
-    qb: T,
-    startId: number | null = null,
-    pageSize: number | null = null,
-) {
-    if (startId == null) {
-        return qb.all();
-    }
-    var result = qb.where(gt(rEle.id, startId))
-    if (pageSize == null) {
-        return result
-    }
-    return result.limit(pageSize);
-}
 
 const dbPath = path.isAbsolute(process.env.DB_PATH)
     ? process.env.DB_FILE_NAME
@@ -90,41 +76,44 @@ const sc = {
     },
 };
 
-/**
- * @type {import('../dist/types/yomitan/termbank').DetailedDefinition}
- */
-const detailedDefinition = {
-    type: 'structured-content',
-    content: sc,
-};
-
-var rebNullCount = 0
-var kebNullCount = 0
 var entryTotal = 0
 var entryInsertedTotal = 0
-async function insertTermEntry(dictionary: Dictionary, entries: any[])
-{
-    entries.forEach(entry=>{
-        console.log(`Inserted: ${++entryInsertedTotal}/${entryTotal}`)
-        if(entry.r_ele == null || entry.r_ele?.reb == null)
-            rebNullCount++
-        if(entry.k_ele == null || entry.k_ele?.keb == null)
-            kebNullCount++
-        const newTerm = new TermEntry(entry.r_ele?.reb)
-        newTerm.setReading(entry.k_ele?.keb)
-        if(entry.gloss?.value != null)
-            newTerm.addDetailedDefinition(entry.gloss?.value)
-        
-        const builtTerm = newTerm.build()
-        dictionary.addTerm(builtTerm)
-    }) 
+async function insertEntry(dictionary: Dictionary, entry: any) {
+    const kanji = db.select()
+        .from(kEle)
+        .where(eq(entry.id, kEle.entryId))
+        .all()
+    const reading = db.select()
+        .from(rEle)
+        .where(eq(entry.id, rEle.entryId))
+        .all()
+    const meaning = db.select()
+        .from(sense)
+        .fullJoin(gloss, eq(sense.id, gloss.senseId))
+        .where(eq(sense.entryId, entry.id))
+        .all()
+
+    const terms: string[] = [
+        ...kanji.map(k=>k.keb),
+        ...reading.map(r=>r.reb)
+    ]
+    const meanings :DetailedDefinition[] = meaning.map(m=>({
+        type: 'text',
+        text: m.gloss?.value ?? ''
+    }))
+    terms.forEach(t => {
+        terms.forEach(t2=>{
+            const newTerm = new TermEntry(t)
+                .setReading(t2)
+                .addDetailedDefinitions(meanings)
+            dictionary.addTerm(newTerm.build())      
+        })
+    })
+    console.log(`entry ${++entryInsertedTotal}/${entryTotal} has ${kanji.length} kanji ${reading.length} reading ${meaning.length} meaning`)
 }
 
-async function queryTermEntries(dictionary: Dictionary, chunkLimit: number) {
+async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number) {
     entryInsertedTotal = 0
-    rebNullCount = 0
-    kebNullCount = 0
-
     entryTotal = db.select()
         .from(entry)
         .all()
@@ -134,18 +123,12 @@ async function queryTermEntries(dictionary: Dictionary, chunkLimit: number) {
         console.log(`page: ${page}/${pagesTotal}`)
         const entries = await db
             .select()
-            .from(rEle)
-            .orderBy(rEle.entryId)
-            .where(gt(rEle.id, page*chunkLimit))
+            .from(entry)
+            .orderBy(entry.id)
+            .where(gt(entry.id, page * chunkLimit))
             .limit(chunkLimit)
-            .rightJoin(kEle, eq(rEle.entryId, kEle.entryId))
-            .rightJoin(sense, eq(rEle.entryId, sense.entryId))
-            .rightJoin(gloss, eq(sense.entryId, gloss.senseId))
-            .$dynamic()
-        insertTermEntry(dictionary, entries)
+        entries.forEach(entry => insertEntry(dictionary, entry))
     }
-
-    console.log(`NULL REB: ${rebNullCount} KEB: ${kebNullCount}`)
 }
 
 export async function buildYomitanDict() {
@@ -161,7 +144,7 @@ export async function buildYomitanDict() {
         .setAttribution('test')
         .build()
     await dictionary.setIndex(index)
-    await queryTermEntries(dictionary, 200)
+    await queryPaginatedEntries(dictionary, 200)
     await dictionary.export()
 }
 
