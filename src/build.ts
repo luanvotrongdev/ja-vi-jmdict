@@ -4,8 +4,8 @@ import { Dictionary, DictionaryIndex, TermEntry } from "yomichan-dict-builder";
 import * as schema from '../schemas'
 import { Database } from 'bun:sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
-import { eq, gt, isNull } from 'drizzle-orm';
-import type { SQLiteSelect, SQLiteSelectBase } from 'drizzle-orm/sqlite-core';
+import { and, eq, gt, isNotNull, isNull, not } from 'drizzle-orm';
+import type { SQLiteSelect } from 'drizzle-orm/sqlite-core';
 
 const {
     entry,
@@ -32,6 +32,21 @@ const {
     example,
     exampleSentence,
 } = schema
+
+function withPagination<T extends SQLiteSelect>(
+    qb: T,
+    startId: number | null = null,
+    pageSize: number | null = null,
+) {
+    if (startId == null) {
+        return qb.all();
+    }
+    var result = qb.where(gt(rEle.id, startId))
+    if (pageSize == null) {
+        return result
+    }
+    return result.limit(pageSize);
+}
 
 const dbPath = path.isAbsolute(process.env.DB_PATH)
     ? process.env.DB_FILE_NAME
@@ -83,40 +98,54 @@ const detailedDefinition = {
     content: sc,
 };
 
-async function withPagination<T extends SQLiteSelect>(
-    qb: T,
-    startId: number,
-    pageSize: number,
-) {
-    return await qb.where(gt(rEle.id, startId)).limit(pageSize);
+var rebNullCount = 0
+var kebNullCount = 0
+var entryTotal = 0
+var entryInsertedTotal = 0
+async function insertTermEntry(dictionary: Dictionary, entries: any[])
+{
+    entries.forEach(entry=>{
+        console.log(`Inserted: ${++entryInsertedTotal}/${entryTotal}`)
+        if(entry.r_ele == null || entry.r_ele?.reb == null)
+            rebNullCount++
+        if(entry.k_ele == null || entry.k_ele?.keb == null)
+            kebNullCount++
+        const newTerm = new TermEntry(entry.r_ele?.reb)
+        newTerm.setReading(entry.k_ele?.keb)
+        if(entry.gloss?.value != null)
+            newTerm.addDetailedDefinition(entry.gloss?.value)
+        
+        const builtTerm = newTerm.build()
+        dictionary.addTerm(builtTerm)
+    }) 
 }
 
-async function queryEntries(dictionary: Dictionary) {
-    const total = db.select()
+async function queryTermEntries(dictionary: Dictionary, chunkLimit: number) {
+    entryInsertedTotal = 0
+    rebNullCount = 0
+    kebNullCount = 0
+
+    entryTotal = db.select()
         .from(entry)
         .all()
         .length
-    const query = db
-        .select()
-        .from(rEle)
-        .rightJoin(kEle, eq(rEle.entryId, kEle.entryId))
-        .rightJoin(sense, eq(rEle.entryId, sense.entryId))
-        .rightJoin(gloss, eq(sense.entryId, gloss.senseId))
-        .orderBy(rEle.entryId)
-        .$dynamic()
-    var count = 0
-    var countNullRele = 0
-    while (count < total) {
-        var element = (await withPagination(query, count, 1))[0]
-        count++
-        if(element == null) continue
-        if(element.r_ele?.reb == null) continue
-        const newTerm = new TermEntry(element.r_ele?.reb)
-        if(element.gloss?.value != null)
-            newTerm.addDetailedDefinition(element.gloss?.value)
-
-        console.log(`Checked: ${count}/${total}`)
+    const pagesTotal = Math.ceil(entryTotal / chunkLimit)
+    for (var page = 0; page < pagesTotal; page++) {
+        console.log(`page: ${page}/${pagesTotal}`)
+        const entries = await db
+            .select()
+            .from(rEle)
+            .orderBy(rEle.entryId)
+            .where(gt(rEle.id, page*chunkLimit))
+            .limit(chunkLimit)
+            .rightJoin(kEle, eq(rEle.entryId, kEle.entryId))
+            .rightJoin(sense, eq(rEle.entryId, sense.entryId))
+            .rightJoin(gloss, eq(sense.entryId, gloss.senseId))
+            .$dynamic()
+        insertTermEntry(dictionary, entries)
     }
+
+    console.log(`NULL REB: ${rebNullCount} KEB: ${kebNullCount}`)
 }
 
 export async function buildYomitanDict() {
@@ -132,7 +161,7 @@ export async function buildYomitanDict() {
         .setAttribution('test')
         .build()
     await dictionary.setIndex(index)
-    await queryEntries(dictionary)
+    await queryTermEntries(dictionary, 200)
     await dictionary.export()
 }
 
