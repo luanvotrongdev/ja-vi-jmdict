@@ -4,34 +4,15 @@ import { Dictionary, DictionaryIndex, TermEntry } from "yomichan-dict-builder";
 import * as schema from '../schemas'
 import { Database } from 'bun:sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
-import { and, eq, gt, isNotNull, isNull, not } from 'drizzle-orm';
-import type { SQLiteSelect } from 'drizzle-orm/sqlite-core';
+import { and, eq, gt, inArray, sql } from 'drizzle-orm';
 import type { DetailedDefinition } from 'yomichan-dict-builder/dist/types/yomitan/termbank';
 
 const {
     entry,
     kEle,
-    keInf,
-    kePri,
     rEle,
-    reRestr,
-    reInf,
-    rePri,
     sense,
-    stagk,
-    stagr,
-    pos,
-    xref,
-    ant,
-    field,
-    misc,
-    senseInfo,
-    lsource,
-    dial,
     gloss,
-    glossPriority,
-    example,
-    exampleSentence,
 } = schema
 
 const dbPath = path.isAbsolute(process.env.DB_PATH)
@@ -59,77 +40,162 @@ if (!hasEntryTable) {
 
 const db = drizzle(sqlite, { schema })
 
-/**
- * @type {import('../dist/types/yomitan/termbank').StructuredContent}
- */
-const sc = {
-    tag: 'span',
-    content: 'string',
-    data: {
-        'dict-data': 'test',
-    },
-    lang: 'ja',
-    style: {
-        fontSize: '20px',
-        fontWeight: 'normal',
-        textDecorationLine: 'overline',
-    },
-};
-
 var entryTotal = 0
 var entryInsertedTotal = 0
-async function insertEntry(dictionary: Dictionary, entry: any) {
-    const kanji = db.select()
-        .from(kEle)
-        .where(eq(entry.id, kEle.entryId))
-        .all()
-    const reading = db.select()
-        .from(rEle)
-        .where(eq(entry.id, rEle.entryId))
-        .all()
-    const meaning = db.select()
-        .from(sense)
-        .fullJoin(gloss, eq(sense.id, gloss.senseId))
-        .where(eq(sense.entryId, entry.id))
-        .all()
 
-    const terms: string[] = [
-        ...kanji.map(k=>k.keb),
-        ...reading.map(r=>r.reb)
-    ]
-    const meanings :DetailedDefinition[] = meaning.map(m=>({
-        type: 'text',
-        text: m.gloss?.value ?? ''
-    }))
-    terms.forEach(t => {
-        terms.forEach(t2=>{
-            const newTerm = new TermEntry(t)
-                .setReading(t2)
-                .addDetailedDefinitions(meanings)
-            dictionary.addTerm(newTerm.build())      
-        })
-    })
-    console.log(`entry ${++entryInsertedTotal}/${entryTotal} has ${kanji.length} kanji ${reading.length} reading ${meaning.length} meaning`)
+type EntryLookups = {
+   kanji: Map<number, string[]>;
+   readings: Map<number, string[]>;
+   definitions: Map<number, DetailedDefinition[]>;
+};
+
+function buildLookups(entryIds: number[]): EntryLookups {
+   const lookups: EntryLookups = {
+       kanji: new Map(),
+       readings: new Map(),
+       definitions: new Map(),
+   };
+
+   if (entryIds.length === 0) {
+       return lookups;
+   }
+
+   const kanjiRows = db
+       .select()
+       .from(kEle)
+       .where(inArray(kEle.entryId, entryIds))
+       .all();
+   kanjiRows.forEach(({ entryId, keb }) => {
+       if (!keb) return;
+       const list = lookups.kanji.get(entryId) ?? [];
+       list.push(keb);
+       lookups.kanji.set(entryId, list);
+   });
+
+   const readingRows = db
+       .select()
+       .from(rEle)
+       .where(inArray(rEle.entryId, entryIds))
+       .all();
+   readingRows.forEach(({ entryId, reb }) => {
+       if (!reb) return;
+       const list = lookups.readings.get(entryId) ?? [];
+       list.push(reb);
+       lookups.readings.set(entryId, list);
+   });
+
+   const meaningRows = db
+       .select()
+       .from(sense)
+       .leftJoin(gloss, eq(sense.id, gloss.senseId))
+       .where(inArray(sense.entryId, entryIds))
+       .all();
+
+   const meaningTextByEntry = new Map<number, Set<string>>();
+   meaningRows.forEach(({ sense: senseRow, gloss: glossRow }) => {
+       const entryId = senseRow?.entryId;
+       if (entryId == null) return;
+       const text = glossRow?.value?.trim();
+       if (!text) return;
+       const bucket = meaningTextByEntry.get(entryId) ?? new Set<string>();
+       bucket.add(text);
+       meaningTextByEntry.set(entryId, bucket);
+   });
+
+   meaningTextByEntry.forEach((texts, entryId) => {
+       const definitions = Array.from(texts).map(
+           (text) => ({ type: 'text', text } as DetailedDefinition),
+       );
+       lookups.definitions.set(entryId, definitions);
+   });
+
+   return lookups;
 }
 
-async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number) {
-    entryInsertedTotal = 0
-    entryTotal = db.select()
+async function insertEntry(
+   dictionary: Dictionary,
+   entryRow: typeof entry.$inferSelect,
+   lookups: EntryLookups,
+) {
+   const entryId = entryRow.id;
+   const kanjiTerms = lookups.kanji.get(entryId) ?? [];
+   const readingTerms = lookups.readings.get(entryId) ?? [];
+   const definitionList = lookups.definitions.get(entryId) ?? [];
+
+   const uniqueKanji = Array.from(new Set(kanjiTerms));
+   const uniqueReadings = Array.from(new Set(readingTerms));
+   const writings = uniqueKanji.length > 0 ? uniqueKanji : uniqueReadings;
+
+   if (writings.length === 0) {
+       return;
+   }
+
+    if (uniqueReadings.length === 0) {
+       for (const writing of writings) {
+            await dictionary.addTerm(
+               new TermEntry(writing)
+                   .addDetailedDefinitions(definitionList)
+                   .build(),
+           );
+       }
+   } else {
+       for (const writing of writings) {
+           for (const reading of uniqueReadings) {
+                await dictionary.addTerm(
+                   new TermEntry(writing)
+                       .setReading(reading)
+                       .addDetailedDefinitions(definitionList)
+                       .build(),
+               );
+           }
+       }
+   }
+
+   entryInsertedTotal += 1;
+   console.log(
+       `entry ${entryInsertedTotal}/${entryTotal} has ${uniqueKanji.length} kanji ${uniqueReadings.length} reading ${definitionList.length} meaning`,
+   );
+}
+
+
+async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number, maxEntries: number = Number.POSITIVE_INFINITY) {
+    entryInsertedTotal = 0;
+    const totalRow = db
+        .select({ value: sql<number>`count(*)` })
         .from(entry)
-        .all()
-        .length
-    const pagesTotal = Math.ceil(entryTotal / chunkLimit)
-    for (var page = 0; page < pagesTotal; page++) {
-        console.log(`page: ${page}/${pagesTotal}`)
-        const entries = await db
+        .get();
+    entryTotal = totalRow?.value ?? 0;
+
+    let lastEntryId: number | null = -1;
+
+    while (true) {
+        const entries = db
             .select()
             .from(entry)
             .orderBy(entry.id)
-            .where(gt(entry.id, page * chunkLimit))
+            .where(gt(entry.id, lastEntryId))
             .limit(chunkLimit)
-        entries.forEach(entry => insertEntry(dictionary, entry))
+            .all()
+
+        if (entries.length === 0) break
+
+        lastEntryId = entries[entries.length - 1].id
+
+        const entryIds = entries.map((row) => row.id)
+        const lookups = buildLookups(entryIds);
+
+        for (const row of entries) {
+            if (entryInsertedTotal >= maxEntries) {
+                return;
+            }
+            await insertEntry(dictionary, row, lookups);
+            if (entryInsertedTotal >= maxEntries) {
+                return;
+            }
+        }
     }
 }
+
 
 export async function buildYomitanDict() {
     const dictionary = new Dictionary({
@@ -144,7 +210,8 @@ export async function buildYomitanDict() {
         .setAttribution('test')
         .build()
     await dictionary.setIndex(index)
-    await queryPaginatedEntries(dictionary, 200)
+    const maxEntries = process.env.MAX_ENTRIES ? Number(process.env.MAX_ENTRIES) : Number.POSITIVE_INFINITY;
+    await queryPaginatedEntries(dictionary, 200, maxEntries)
     await dictionary.export()
 }
 
