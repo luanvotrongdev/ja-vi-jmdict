@@ -1,4 +1,9 @@
-export interface MaziiKanjiSearchRequest {
+const MAZII_ENDPOINT = 'https://mazii.net/api/search'
+
+export const MAZII_KANJI_ENDPOINT = `${MAZII_ENDPOINT}/kanji`
+export const MAZII_WORD_ENDPOINT = `${MAZII_ENDPOINT}/word`
+
+export interface MaziiSearchRequest {
   /**
    * Dictionary to search against. Defaults to `'javi'` which returns Japanese → Vietnamese results.
    */
@@ -11,6 +16,10 @@ export interface MaziiKanjiSearchRequest {
    * The kanji or reading to search for.
    */
   query: string
+  /**
+   * The limit to search for.
+   */
+  limit: number
   /**
    * 1-based page index.
    */
