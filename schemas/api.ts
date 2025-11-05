@@ -1,5 +1,11 @@
-const MAZII_ENDPOINT = 'https://mazii.net/api/search'
 
+const MAZII_ENDPOINT = 'https://mazii.net/api/search'
+const MAZII_USER_AGENT ='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
+
+export const MAZII_HEADERS = {
+      'Content-Type': 'application/json',
+      'User-Agent': MAZII_USER_AGENT
+    }
 export const MAZII_KANJI_ENDPOINT = `${MAZII_ENDPOINT}/kanji`
 export const MAZII_WORD_ENDPOINT = `${MAZII_ENDPOINT}/word`
 

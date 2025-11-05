@@ -2,7 +2,8 @@ import {
   type MaziiKanjiResult,
   type MaziiSearchRequest,
   type MaziiKanjiSearchResponse,
-  MAZII_KANJI_ENDPOINT
+  MAZII_KANJI_ENDPOINT,
+  MAZII_HEADERS
 } from '../schemas/api.ts'
 
 
@@ -21,10 +22,7 @@ function assertResponseShape(payload: unknown): asserts payload is MaziiKanjiSea
 export async function searchMaziiKanji(kanji: string): Promise<MaziiKanjiResult[]> {
   const response = await fetch(MAZII_KANJI_ENDPOINT, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
-    },
+    headers: MAZII_HEADERS,
     body: JSON.stringify({
         dict: "javi",
         type: "kanji",
