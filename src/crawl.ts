@@ -6,12 +6,9 @@ type JishoAPICtor = new () => import('unofficial-jisho-api').default
 const JishoAPI = require('unofficial-jisho-api') as unknown as JishoAPICtor
 
 import 'dotenv/config'
-import path, { relative } from 'path'
 import * as schema from '../schemas'
-import { Database } from 'bun:sqlite'
-import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { eq, sql, gt } from 'drizzle-orm'
-import { exit } from 'process'
+import { getDatabase } from 'handler'
 
 const {
     kEle,
@@ -19,31 +16,6 @@ const {
     rawWordCrawlJson,
     rawKanjiCrawlJson
 } = schema
-
-const dbPath = path.isAbsolute(process.env.DB_PATH || '')
-    ? (process.env.DB_FILE_NAME || '')
-    : path.resolve(process.cwd(), process.env.DB_PATH || '')
-if (!dbPath) {
-    throw new Error(
-        `Database does not exist.`,
-    )
-}
-const sqlite = Database.open(dbPath, {
-    readwrite: true
-})
-sqlite.run('PRAGMA foreign_keys = ON')
-
-const hasEntryTable = sqlite
-    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
-    .get('entry')
-if (!hasEntryTable) {
-    sqlite.close()
-    throw new Error(
-        `SQLite schema is missing expected JMdict tables. Run "npx drizzle-kit push" to create them before importing.`,
-    )
-}
-
-const db = drizzle(sqlite, { schema })
 
 const jisho = new JishoAPI()
 
@@ -100,14 +72,14 @@ async function crawlWord(word: string) {
 }
 
 async function crawl(entryId: number, phrase: string) {
+    const db = getDatabase()
     const existingPhrase = db
-            .select({ entryId: rawWordCrawlJson.entryId })
-            .from(rawWordCrawlJson)
-            .where(eq(rawWordCrawlJson.entryId, entryId))
-            .limit(1)
-            .get()
-    if(!existingPhrase)
-    {
+        .select({ entryId: rawWordCrawlJson.entryId })
+        .from(rawWordCrawlJson)
+        .where(eq(rawWordCrawlJson.entryId, entryId))
+        .limit(1)
+        .get()
+    if (!existingPhrase) {
         const wordResult = await crawlWord(phrase)
         db.insert(rawWordCrawlJson)
             .values({
@@ -137,7 +109,8 @@ async function crawl(entryId: number, phrase: string) {
     }
 }
 
-async function crawlFromDatabase() {
+export async function crawlFromDatabase() {
+    const db = getDatabase()
     let chunkLimit = 200
     let entryInsertedTotal = 0;
     const totalKeleRows = db
@@ -198,19 +171,3 @@ async function crawlFromDatabase() {
 
     console.log("DONE!")
 }
-
-// async function crawlTest()
-// {
-//     await crawl("々")
-//     await crawl("家")
-//     await crawl("家族")
-//     await crawl("いちぞく")
-// }
-
-db.delete(rawWordCrawlJson).run()
-db.delete(rawKanjiCrawlJson).run()
-exit(0)
-
-await crawlFromDatabase()
-
-sqlite.close()

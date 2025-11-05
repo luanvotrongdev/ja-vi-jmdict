@@ -3,7 +3,10 @@ import { cwd, env, exit } from 'node:process'
 import path from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process'
-import { writeJmdictToDatabase } from './jmdict_process.ts'
+import { writeJmdictToDatabase } from './jmdict_process'
+import { crawlFromDatabase } from 'crawl'
+import { buildYomitan } from 'build'
+import { closeDatabase, runCommand, resetAll, resetCrawlTable, pushSchema } from 'handler'
 
 type YesNoDefault = true | false
 
@@ -20,36 +23,11 @@ async function promptYesNo(
   return answer === 'y' || answer === 'yes'
 }
 
-async function runCommand(command: string, args: string[], extraEnv: Record<string, string> = {}) {
-  const proc = Bun.spawn({
-    cmd: [command, ...args],
-    cwd: cwd(),
-    env: {
-      ...env,
-      ...extraEnv,
-    },
-    stdio: ['inherit', 'inherit', 'inherit'],
-  })
-
-  const status = await proc.exited
-  if (status !== 0) {
-    throw new Error(`Command "${[command, ...args].join(' ')}" failed with exit code ${status}`)
-  }
-}
-
 async function ensureDownloader(): Promise<void> {
-  await runCommand(process.argv[0], ['run', 'src/downloader.ts'])
+  await runCommand(process.argv[0]!, ['run', 'src/downloader.ts'])
 }
 
-async function pushSchema(dbFileName: string | undefined): Promise<void> {
-  const drizzleEnv: Record<string, string> = {}
-  if (dbFileName) {
-    drizzleEnv.DB_FILE_NAME = dbFileName
-  }
-  await runCommand('npx', ['drizzle-kit', 'push'], drizzleEnv)
-}
-
-async function main() {
+async function jmdict() {
   const rl = createInterface({ input, output })
 
   try {
@@ -109,4 +87,27 @@ async function main() {
   }
 }
 
-await main()
+const actions: Record<string, () => Promise<void>> = {
+  jmdict: async () => { await jmdict() },
+  resetall: async () => { await resetAll() },
+  resetcrawl: async () => { resetCrawlTable() },
+  crawl: async () => { await crawlFromDatabase() },
+  yomitan: async () => { await buildYomitan() },
+}
+
+const command = process.argv[2]
+console.log(command)
+const action = command ? actions[command] : undefined
+
+if (!action) {
+  console.error('Usage: npm run main -- <jmdict|resetall|resetcrawl|crawl|yomitan>')
+  console.error('       jmdict        - fetch and parse jmdict')
+  console.error('       resetall      - delete and reset all table')
+  console.error('       resetcrawl    - reset jisho/mazii crawl table')
+  console.error('       crawl         - start jisho/mazii crawl')
+  console.error('       yomitan       - start yomitan export')
+  process.exit(1)
+}
+
+await action()
+closeDatabase()

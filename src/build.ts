@@ -1,11 +1,9 @@
 import 'dotenv/config'
-import path from 'path'
 import { Dictionary, DictionaryIndex, KanjiEntry, TermEntry } from "yomichan-dict-builder";
 import * as schema from '../schemas'
-import { Database } from 'bun:sqlite'
-import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { eq, gt, inArray, sql } from 'drizzle-orm';
 import type { DetailedDefinition } from 'yomichan-dict-builder/dist/types/yomitan/termbank';
+import { getDatabase } from 'handler';
 
 const {
     entry,
@@ -16,31 +14,6 @@ const {
 } = schema
 
 const kanjiPattern = /^[\u4E00-\u9FAF\u3400-\u4DBF]+$/u
-
-const dbPath = path.isAbsolute(process.env.DB_PATH || '')
-    ? (process.env.DB_FILE_NAME || '')
-    : path.resolve(process.cwd(), process.env.DB_PATH || '')
-if (!dbPath) {
-    throw new Error(
-        `Database does not exist.`,
-    )
-}
-const sqlite = Database.open(dbPath, {
-    readwrite: true
-})
-sqlite.run('PRAGMA foreign_keys = ON')
-
-const hasEntryTable = sqlite
-    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
-    .get('entry')
-if (!hasEntryTable) {
-    sqlite.close()
-    throw new Error(
-        `SQLite schema is missing expected JMdict tables. Run "npx drizzle-kit push" to create them before importing.`,
-    )
-}
-
-const db = drizzle(sqlite, { schema })
 
 type EntryLookups = {
     kanji: Map<number, string[]>;
@@ -59,6 +32,7 @@ function buildLookups(entryIds: number[]): EntryLookups {
         return lookups
     }
 
+    const db = getDatabase()
     const kanjiRows = db
         .select()
         .from(kEle)
@@ -158,7 +132,7 @@ async function insertEntry(
 
 async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number, maxEntries: number = Number.POSITIVE_INFINITY) {
     var entryInsertedTotal = 0;
-    
+    const db = getDatabase()
     const entryTotal = db
         .select({ value: sql<number>`count(*)` })
         .from(entry)
@@ -194,18 +168,21 @@ async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number,
     }
 }
 
-const dictionary = new Dictionary({
-    fileName: "./output/lulujv.zip"
-})
+export async function buildYomitan()
+{
+    const dictionary = new Dictionary({
+        fileName: "./output/lulujv.zip"
+    })
 
-const index = new DictionaryIndex()
-    .setTitle("Lulu J-V Dictionary")
-    .setAuthor("LULU")
-    .setRevision("0.2")
-    .setDescription("A test dictionary for Yomitan dict")
-    .setAttribution('test')
-    .build()
-await dictionary.setIndex(index)
-const maxEntries = process.env.MAX_ENTRIES ? Number(process.env.MAX_ENTRIES) : Number.POSITIVE_INFINITY;
-await queryPaginatedEntries(dictionary, 200, maxEntries)
-await dictionary.export()
+    const index = new DictionaryIndex()
+        .setTitle("Lulu J-V Dictionary")
+        .setAuthor("LULU")
+        .setRevision("0.2")
+        .setDescription("A test dictionary for Yomitan dict")
+        .setAttribution('test')
+        .build()
+    await dictionary.setIndex(index)
+    const maxEntries = process.env.MAX_ENTRIES ? Number(process.env.MAX_ENTRIES) : Number.POSITIVE_INFINITY;
+    await queryPaginatedEntries(dictionary, 200, maxEntries)
+    await dictionary.export()
+}

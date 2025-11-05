@@ -1,11 +1,9 @@
 import 'dotenv/config'
-import path from 'path'
-import { Database } from 'bun:sqlite'
-import { drizzle } from 'drizzle-orm/bun-sqlite'
 import * as schema from '../schemas'
 import { XMLParser } from 'fast-xml-parser'
 import fs from 'fs'
-import { cwd } from 'process'
+import { cwd, exit } from 'process'
+import { getDatabase } from 'handler'
 
 type RawNode = unknown
 
@@ -26,13 +24,10 @@ const {
   ant,
   field,
   misc,
-  senseInfo,
   lsource,
   dial,
   gloss,
-  glossPriority,
   example,
-  exampleSentence,
 } = schema
 
 function toArray<T>(value: T | T[] | null | undefined): T[] {
@@ -103,33 +98,7 @@ export async function writeJmdictToDatabase(): Promise<void> {
   }
 
   const entries = toArray(jmdict.entry as RawNode)
-  const dbPath = path.isAbsolute(process.env.DB_PATH)
-    ? process.env.DB_FILE_NAME
-    : path.resolve(process.cwd(), process.env.DB_PATH)
-  if (!dbPath) {
-    throw new Error(
-      `Database does not exist.`,
-    )
-  }
-  const sqlite = Database.open(dbPath, {
-    readwrite: true
-  })
-  sqlite.run('PRAGMA foreign_keys = ON')
-
-  const hasEntryTable = sqlite
-    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
-    .get('entry')
-  if (!hasEntryTable) {
-    sqlite.close()
-    throw new Error(
-      `SQLite schema is missing expected JMdict tables. Run "npx drizzle-kit push" to create them before importing.`,
-    )
-  }
-
-  const db = drizzle(sqlite, { schema })
-
-  console.log(`Importing ${entries.length} JMdict entries into ${dbPath}...`)
-
+  const db = getDatabase()
   try {
     db.transaction((tx) => {
       tx.delete(entry).run()
@@ -516,7 +485,7 @@ export async function writeJmdictToDatabase(): Promise<void> {
 
     console.log('JMdict import complete.')
   } finally {
-    sqlite.close()
+    exit(1)
   }
 }
 
