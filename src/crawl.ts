@@ -6,14 +6,13 @@ type JishoAPICtor = new () => import('unofficial-jisho-api').default
 const JishoAPI = require('unofficial-jisho-api') as unknown as JishoAPICtor
 
 import 'dotenv/config'
-import path from 'path'
+import path, { relative } from 'path'
 import * as schema from '../schemas'
 import { Database } from 'bun:sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
-import { eq } from 'drizzle-orm'
+import { eq, sql, gt } from 'drizzle-orm'
 
 const {
-    entry,
     kEle,
     rEle,
     rawWordCrawlJson,
@@ -51,10 +50,12 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-async function randomSleep(minMs: number, maxMs: number) {
+async function randomSleep() {
+    const minMs: number = 500
+    const maxMs: number = 1500
     const ms = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs
+    process.stdout.write(`slept ${ms} then `)
     await sleep(ms)
-    return ms
 }
 
 function isKanji(char: string): boolean {
@@ -72,11 +73,11 @@ function isKanji(char: string): boolean {
 }
 
 async function crawlKanji(kanji: string) {
-    const slept = await randomSleep(1000, 3000)
+    await randomSleep()
     const jishoResult = await jisho.searchForKanji(kanji)
     const maziiKanji = await searchMaziiKanji(kanji)
 
-    console.log(`queried kanji ${kanji} slept ${slept}`)
+    console.log(`query kanji ${kanji}`)
     return {
         type: "kanji",
         mazii: maziiKanji,
@@ -85,11 +86,11 @@ async function crawlKanji(kanji: string) {
 }
 
 async function crawlWord(word: string) {
-    const slept = await randomSleep(1000, 3000)
+    await randomSleep()
     const jishoResult = await jisho.searchForPhrase(word)
     const maziiWord = await searchMaziiWord(word)
 
-    console.log(`queried word ${word} slept ${slept}`)
+    console.log(`query word ${word}`)
     return {
         type: "word",
         mazii: maziiWord,
@@ -125,12 +126,79 @@ async function crawl(phrase: string) {
     }
 }
 
+async function crawlFromDatabase() {
+    let chunkLimit = 200
+    let entryInsertedTotal = 0;
+    const totalKeleRows = db
+        .select({ value: sql<number>`count(*)` })
+        .from(kEle)
+        .get()?.value!;
+    const totalReleRows = db
+        .select({ value: sql<number>`count(*)` })
+        .from(rEle)
+        .get()?.value!;
+
+    const totalRows = totalKeleRows + totalReleRows
+
+    let lastEntryId: number = -1;
+
+    while (true) {
+        const entries = db
+            .select()
+            .from(kEle)
+            .orderBy(kEle.id)
+            .where(gt(kEle.id, lastEntryId))
+            .limit(chunkLimit)
+            .all()
+            .values()
+            .toArray()
+
+        if (entries.length === 0) break
+
+        lastEntryId = entries[entries.length - 1]!.id
+        for (const row of entries) {
+            await crawl(row.keb)
+            entryInsertedTotal++
+            console.log(`crawled ${entryInsertedTotal}/${totalRows} at kanji row ${row.keb}`)
+        }
+    }
+
+    lastEntryId = -1
+    while (true) {
+        const entries = db
+            .select()
+            .from(rEle)
+            .orderBy(rEle.id)
+            .where(gt(rEle.id, lastEntryId))
+            .limit(chunkLimit)
+            .all()
+            .values()
+            .toArray()
+
+        if (entries.length === 0) break
+
+        lastEntryId = entries[entries.length - 1]!.id
+        for (const row of entries) {
+            await crawl(row.reb)
+            entryInsertedTotal++
+            console.log(`crawled ${entryInsertedTotal}/${totalRows} at kanji row ${row.reb}`)
+        }
+    }
+
+    console.log("DONE!")
+}
+
+async function crawlTest()
+{
+    await crawl("々")
+    await crawl("家")
+    await crawl("家族")
+    await crawl("いちぞく")
+}
+
 db.delete(rawWordCrawlJson).run()
 db.delete(rawKanjiCrawlJson).run()
 
-await crawl("々")
-await crawl("家")
-await crawl("家族")
-await crawl("いちぞく")
+await crawlFromDatabase()
 
 sqlite.close()

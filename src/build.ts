@@ -42,9 +42,6 @@ if (!hasEntryTable) {
 
 const db = drizzle(sqlite, { schema })
 
-var entryTotal = 0
-var entryInsertedTotal = 0
-
 type EntryLookups = {
     kanji: Map<number, string[]>;
     readings: Map<number, string[]>;
@@ -156,21 +153,16 @@ async function insertEntry(
                 .addMeanings(definitionList.map(d => d.toString()))
                 .build())
     }
-
-    entryInsertedTotal += 1
-    console.log(
-        `entry ${entryInsertedTotal}/${entryTotal} has ${uniqueKanji.length} kanji ${uniqueReadings.length} reading ${definitionList.length} meaning`,
-    )
 }
 
 
 async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number, maxEntries: number = Number.POSITIVE_INFINITY) {
-    entryInsertedTotal = 0;
-    const totalRow = db
+    var entryInsertedTotal = 0;
+    
+    const entryTotal = db
         .select({ value: sql<number>`count(*)` })
         .from(entry)
-        .get();
-    entryTotal = totalRow?.value ?? 0;
+        .get()?.value;
 
     let lastEntryId: number | null = -1;
 
@@ -191,33 +183,29 @@ async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number,
         const lookups = buildLookups(entryIds);
 
         for (const row of entries) {
-            if (entryInsertedTotal >= maxEntries) {
-                return;
-            }
+            if (entryInsertedTotal >= maxEntries) return
             await insertEntry(dictionary, row, lookups);
-            if (entryInsertedTotal >= maxEntries) {
-                return;
-            }
+
+            entryInsertedTotal += 1
+            console.log(
+                `entry ${entryInsertedTotal}/${entryTotal}`,
+            )
         }
     }
 }
 
-export async function buildYomitanDict() {
-    const dictionary = new Dictionary({
-        fileName: "./output/lulujv.zip"
-    })
+const dictionary = new Dictionary({
+    fileName: "./output/lulujv.zip"
+})
 
-    const index = new DictionaryIndex()
-        .setTitle("Lulu J-V Dictionary")
-        .setAuthor("LULU")
-        .setRevision("0.2")
-        .setDescription("A test dictionary for Yomitan dict")
-        .setAttribution('test')
-        .build()
-    await dictionary.setIndex(index)
-    const maxEntries = process.env.MAX_ENTRIES ? Number(process.env.MAX_ENTRIES) : Number.POSITIVE_INFINITY;
-    await queryPaginatedEntries(dictionary, 200, maxEntries)
-    await dictionary.export()
-}
-
-await buildYomitanDict()
+const index = new DictionaryIndex()
+    .setTitle("Lulu J-V Dictionary")
+    .setAuthor("LULU")
+    .setRevision("0.2")
+    .setDescription("A test dictionary for Yomitan dict")
+    .setAttribution('test')
+    .build()
+await dictionary.setIndex(index)
+const maxEntries = process.env.MAX_ENTRIES ? Number(process.env.MAX_ENTRIES) : Number.POSITIVE_INFINITY;
+await queryPaginatedEntries(dictionary, 200, maxEntries)
+await dictionary.export()
