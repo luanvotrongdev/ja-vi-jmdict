@@ -176,6 +176,7 @@ export const rawWordCrawlJson = sqliteTable('raw_word_crawl_json', {
 })
 
 export const rawKanjiCrawlJson = sqliteTable('raw_kanji_crawl_json', {
-    id: text('id').primaryKey(),
+    id: int('id').primaryKey({autoIncrement:true}),
+    textId: text('textId').unique(),
     json: text('json').notNull()
 })

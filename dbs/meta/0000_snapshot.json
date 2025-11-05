@@ -1,0 +1,1338 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "prevId": "",
+  "version": "6",
+  "dialect": "sqlite",
+  "tables": {
+    "ant": {
+      "name": "ant",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "ant_sense_id_sense_id_fk": {
+          "name": "ant_sense_id_sense_id_fk",
+          "tableFrom": "ant",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "dial": {
+      "name": "dial",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "dial_sense_id_sense_id_fk": {
+          "name": "dial_sense_id_sense_id_fk",
+          "tableFrom": "dial",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "entry": {
+      "name": "entry",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "ent_seq": {
+          "autoincrement": false,
+          "name": "ent_seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {
+        "entry_ent_seq_unique": {
+          "name": "entry_ent_seq_unique",
+          "columns": [
+            "ent_seq"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "example": {
+      "name": "example",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ex_srce": {
+          "autoincrement": false,
+          "name": "ex_srce",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exsrc_type": {
+          "autoincrement": false,
+          "name": "exsrc_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ex_text": {
+          "autoincrement": false,
+          "name": "ex_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "example_sense_id_sense_id_fk": {
+          "name": "example_sense_id_sense_id_fk",
+          "tableFrom": "example",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ex_sent": {
+      "name": "ex_sent",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "example_id": {
+          "autoincrement": false,
+          "name": "example_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "xml_lang": {
+          "autoincrement": false,
+          "name": "xml_lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "ex_sent_example_id_example_id_fk": {
+          "name": "ex_sent_example_id_example_id_fk",
+          "tableFrom": "ex_sent",
+          "tableTo": "example",
+          "columnsFrom": [
+            "example_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "field": {
+      "name": "field",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "field_sense_id_sense_id_fk": {
+          "name": "field_sense_id_sense_id_fk",
+          "tableFrom": "field",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "gloss": {
+      "name": "gloss",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "xml_lang": {
+          "autoincrement": false,
+          "name": "xml_lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "g_gend": {
+          "autoincrement": false,
+          "name": "g_gend",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "g_type": {
+          "autoincrement": false,
+          "name": "g_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "gloss_sense_id_sense_id_fk": {
+          "name": "gloss_sense_id_sense_id_fk",
+          "tableFrom": "gloss",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "gloss_pri": {
+      "name": "gloss_pri",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "gloss_id": {
+          "autoincrement": false,
+          "name": "gloss_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "gloss_pri_gloss_id_gloss_id_fk": {
+          "name": "gloss_pri_gloss_id_gloss_id_fk",
+          "tableFrom": "gloss_pri",
+          "tableTo": "gloss",
+          "columnsFrom": [
+            "gloss_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "k_ele": {
+      "name": "k_ele",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entry_id": {
+          "autoincrement": false,
+          "name": "entry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keb": {
+          "autoincrement": false,
+          "name": "keb",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "k_ele_entry_id_entry_id_fk": {
+          "name": "k_ele_entry_id_entry_id_fk",
+          "tableFrom": "k_ele",
+          "tableTo": "entry",
+          "columnsFrom": [
+            "entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ke_inf": {
+      "name": "ke_inf",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "k_ele_id": {
+          "autoincrement": false,
+          "name": "k_ele_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "ke_inf_k_ele_id_k_ele_id_fk": {
+          "name": "ke_inf_k_ele_id_k_ele_id_fk",
+          "tableFrom": "ke_inf",
+          "tableTo": "k_ele",
+          "columnsFrom": [
+            "k_ele_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "ke_pri": {
+      "name": "ke_pri",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "k_ele_id": {
+          "autoincrement": false,
+          "name": "k_ele_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "ke_pri_k_ele_id_k_ele_id_fk": {
+          "name": "ke_pri_k_ele_id_k_ele_id_fk",
+          "tableFrom": "ke_pri",
+          "tableTo": "k_ele",
+          "columnsFrom": [
+            "k_ele_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "lsource": {
+      "name": "lsource",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "xml_lang": {
+          "autoincrement": false,
+          "name": "xml_lang",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ls_type": {
+          "autoincrement": false,
+          "name": "ls_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ls_wasei": {
+          "autoincrement": false,
+          "name": "ls_wasei",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "lsource_sense_id_sense_id_fk": {
+          "name": "lsource_sense_id_sense_id_fk",
+          "tableFrom": "lsource",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "misc": {
+      "name": "misc",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "misc_sense_id_sense_id_fk": {
+          "name": "misc_sense_id_sense_id_fk",
+          "tableFrom": "misc",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "pos": {
+      "name": "pos",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "pos_sense_id_sense_id_fk": {
+          "name": "pos_sense_id_sense_id_fk",
+          "tableFrom": "pos",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "r_ele": {
+      "name": "r_ele",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entry_id": {
+          "autoincrement": false,
+          "name": "entry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reb": {
+          "autoincrement": false,
+          "name": "reb",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "re_nokanji": {
+          "autoincrement": false,
+          "name": "re_nokanji",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "r_ele_entry_id_entry_id_fk": {
+          "name": "r_ele_entry_id_entry_id_fk",
+          "tableFrom": "r_ele",
+          "tableTo": "entry",
+          "columnsFrom": [
+            "entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "re_inf": {
+      "name": "re_inf",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "r_ele_id": {
+          "autoincrement": false,
+          "name": "r_ele_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "re_inf_r_ele_id_r_ele_id_fk": {
+          "name": "re_inf_r_ele_id_r_ele_id_fk",
+          "tableFrom": "re_inf",
+          "tableTo": "r_ele",
+          "columnsFrom": [
+            "r_ele_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "re_pri": {
+      "name": "re_pri",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "r_ele_id": {
+          "autoincrement": false,
+          "name": "r_ele_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "re_pri_r_ele_id_r_ele_id_fk": {
+          "name": "re_pri_r_ele_id_r_ele_id_fk",
+          "tableFrom": "re_pri",
+          "tableTo": "r_ele",
+          "columnsFrom": [
+            "r_ele_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "re_restr": {
+      "name": "re_restr",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "r_ele_id": {
+          "autoincrement": false,
+          "name": "r_ele_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "re_restr_r_ele_id_r_ele_id_fk": {
+          "name": "re_restr_r_ele_id_r_ele_id_fk",
+          "tableFrom": "re_restr",
+          "tableTo": "r_ele",
+          "columnsFrom": [
+            "r_ele_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "sense": {
+      "name": "sense",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entry_id": {
+          "autoincrement": false,
+          "name": "entry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sense_index": {
+          "autoincrement": false,
+          "name": "sense_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "sense_entry_id_entry_id_fk": {
+          "name": "sense_entry_id_entry_id_fk",
+          "tableFrom": "sense",
+          "tableTo": "entry",
+          "columnsFrom": [
+            "entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "s_inf": {
+      "name": "s_inf",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "s_inf_sense_id_sense_id_fk": {
+          "name": "s_inf_sense_id_sense_id_fk",
+          "tableFrom": "s_inf",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "stagk": {
+      "name": "stagk",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "stagk_sense_id_sense_id_fk": {
+          "name": "stagk_sense_id_sense_id_fk",
+          "tableFrom": "stagk",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "stagr": {
+      "name": "stagr",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "stagr_sense_id_sense_id_fk": {
+          "name": "stagr_sense_id_sense_id_fk",
+          "tableFrom": "stagr",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "xref": {
+      "name": "xref",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sense_id": {
+          "autoincrement": false,
+          "name": "sense_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "autoincrement": false,
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "autoincrement": false,
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "xref_sense_id_sense_id_fk": {
+          "name": "xref_sense_id_sense_id_fk",
+          "tableFrom": "xref",
+          "tableTo": "sense",
+          "columnsFrom": [
+            "sense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "raw_word_crawl_json": {
+      "name": "raw_word_crawl_json",
+      "columns": {
+        "id": {
+          "autoincrement": false,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entry_id": {
+          "autoincrement": false,
+          "name": "entry_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "json": {
+          "autoincrement": false,
+          "name": "json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {},
+      "foreignKeys": {
+        "raw_word_crawl_json_entry_id_entry_id_fk": {
+          "name": "raw_word_crawl_json_entry_id_entry_id_fk",
+          "tableFrom": "raw_word_crawl_json",
+          "tableTo": "entry",
+          "columnsFrom": [
+            "entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "raw_kanji_crawl_json": {
+      "name": "raw_kanji_crawl_json",
+      "columns": {
+        "id": {
+          "autoincrement": true,
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "textId": {
+          "autoincrement": false,
+          "name": "textId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "json": {
+          "autoincrement": false,
+          "name": "json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "compositePrimaryKeys": {},
+      "indexes": {
+        "raw_kanji_crawl_json_textId_unique": {
+          "name": "raw_kanji_crawl_json_textId_unique",
+          "columns": [
+            "textId"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+}

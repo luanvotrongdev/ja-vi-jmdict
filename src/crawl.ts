@@ -11,6 +11,7 @@ import * as schema from '../schemas'
 import { Database } from 'bun:sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { eq, sql, gt } from 'drizzle-orm'
+import { exit } from 'process'
 
 const {
     kEle,
@@ -122,14 +123,14 @@ async function crawl(entryId: number, phrase: string) {
         const existing = db
             .select({ id: rawKanjiCrawlJson.id })
             .from(rawKanjiCrawlJson)
-            .where(eq(rawKanjiCrawlJson.id, word[i]!))
+            .where(eq(rawKanjiCrawlJson.textId, word[i]!))
             .limit(1)
             .get()
         if (existing) continue
         const kanjiResult = await crawlKanji(word[i]!)
         db.insert(rawKanjiCrawlJson)
             .values({
-                id: word[i]!,
+                textId: word[i]!,
                 json: JSON.stringify(kanjiResult)
             })
             .run()
@@ -208,6 +209,7 @@ async function crawlFromDatabase() {
 
 db.delete(rawWordCrawlJson).run()
 db.delete(rawKanjiCrawlJson).run()
+exit(0)
 
 await crawlFromDatabase()
 
