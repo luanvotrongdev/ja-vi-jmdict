@@ -7,7 +7,7 @@ const JishoAPI = require('unofficial-jisho-api') as unknown as JishoAPICtor
 
 import 'dotenv/config'
 import * as schema from '../schemas'
-import { eq, sql, gt } from 'drizzle-orm'
+import { eq, sql, gt, gte } from 'drizzle-orm'
 import { getDatabase } from 'handler'
 
 const {
@@ -18,14 +18,14 @@ const {
 } = schema
 
 const jisho = new JishoAPI()
+const minMs: number = Number.parseInt(process.env.MIN_CRAWL_SLEEP!)
+const maxMs: number = Number.parseInt(process.env.MAX_CRAWL_SLEEP!)
 
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 async function randomSleep() {
-    const minMs: number = 500
-    const maxMs: number = 1500
     const ms = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs
     console.log(`  ~ will sleep ${ms} then `)
     await sleep(ms)
@@ -123,15 +123,21 @@ export async function crawlFromDatabase() {
         .get()?.value!;
 
     const totalRows = totalKeleRows + totalReleRows
-
-    let lastEntryId: number = -1;
+    
+    const maxEntryId = db.select()
+                            .from(rawWordCrawlJson)
+                            .orderBy(rawWordCrawlJson.entryId)
+                            .limit(1)
+                            .values()
+    let lastEntryId: number = maxEntryId.length > 0 ? maxEntryId[0] : -1;
+    console.log(lastEntryId)
 
     while (true) {
         const entries = db
             .select()
             .from(kEle)
             .orderBy(kEle.id)
-            .where(gt(kEle.id, lastEntryId))
+            .where(gte(kEle.id, lastEntryId))
             .limit(chunkLimit)
             .all()
             .values()

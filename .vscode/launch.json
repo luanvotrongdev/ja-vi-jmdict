@@ -33,7 +33,8 @@
             "name": "Debug crawl Script",
             "runtimeArgs": [
                 "run",
-                "src/crawl"
+                "main",
+                "crawl"
             ],
             "cwd": "${workspaceFolder}",
             "internalConsoleOptions": "neverOpen"
