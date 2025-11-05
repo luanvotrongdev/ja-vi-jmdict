@@ -168,3 +168,14 @@ export const exampleSentence = sqliteTable('ex_sent', {
   value: text('value').notNull(),
   position: int('position').notNull(),
 })
+
+export const rawWordCrawlJson = sqliteTable('raw_word_crawl_json', {
+    id: int('id').primaryKey(),
+    entryId: int('entry_id').notNull().references(() => entry.id, { onDelete: 'cascade' }),
+    json: text('json').notNull(),
+})
+
+export const rawKanjiCrawlJson = sqliteTable('raw_kanji_crawl_json', {
+    id: text('id').primaryKey(),
+    json: text('json').notNull()
+})

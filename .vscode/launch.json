@@ -30,6 +30,17 @@
         {
             "type": "bun",
             "request": "launch",
+            "name": "Debug crawl Script",
+            "runtimeArgs": [
+                "run",
+                "src/crawl"
+            ],
+            "cwd": "${workspaceFolder}",
+            "internalConsoleOptions": "neverOpen"
+        },
+        {
+            "type": "bun",
+            "request": "launch",
             "name": "Debug build Script",
             "runtimeArgs": [
                 "run",
