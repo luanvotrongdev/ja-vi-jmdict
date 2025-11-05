@@ -54,7 +54,7 @@ async function randomSleep() {
     const minMs: number = 500
     const maxMs: number = 1500
     const ms = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs
-    process.stdout.write(`slept ${ms} then `)
+    console.log(`  ~ will sleep ${ms} then `)
     await sleep(ms)
 }
 
@@ -77,7 +77,7 @@ async function crawlKanji(kanji: string) {
     const jishoResult = await jisho.searchForKanji(kanji)
     const maziiKanji = await searchMaziiKanji(kanji)
 
-    console.log(`query kanji ${kanji}`)
+    console.log(`  * start query kanji ${kanji}`)
     return {
         type: "kanji",
         mazii: maziiKanji,
@@ -90,7 +90,7 @@ async function crawlWord(word: string) {
     const jishoResult = await jisho.searchForPhrase(word)
     const maziiWord = await searchMaziiWord(word)
 
-    console.log(`query word ${word}`)
+    console.log(`  - start query word ${word}`)
     return {
         type: "word",
         mazii: maziiWord,
@@ -157,9 +157,9 @@ async function crawlFromDatabase() {
 
         lastEntryId = entries[entries.length - 1]!.id
         for (const row of entries) {
-            await crawl(row.keb)
             entryInsertedTotal++
-            console.log(`crawled ${entryInsertedTotal}/${totalRows} at kanji row ${row.keb}`)
+            console.log(`start crawl ${entryInsertedTotal}/${totalRows} at row ${row.keb}`)
+            await crawl(row.keb)
         }
     }
 
@@ -179,9 +179,9 @@ async function crawlFromDatabase() {
 
         lastEntryId = entries[entries.length - 1]!.id
         for (const row of entries) {
+            console.log(`start crawl ${entryInsertedTotal}/${totalRows} at row ${row.reb}`)
             await crawl(row.reb)
             entryInsertedTotal++
-            console.log(`crawled ${entryInsertedTotal}/${totalRows} at kanji row ${row.reb}`)
         }
     }
 
