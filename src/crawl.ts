@@ -98,13 +98,23 @@ async function crawlWord(word: string) {
     }
 }
 
-async function crawl(phrase: string) {
-    const wordResult = await crawlWord(phrase)
-    db.insert(rawWordCrawlJson)
-        .values({
-            json: JSON.stringify(wordResult)
-        })
-        .run()
+async function crawl(entryId: number, phrase: string) {
+    const existingPhrase = db
+            .select({ entryId: rawWordCrawlJson.entryId })
+            .from(rawWordCrawlJson)
+            .where(eq(rawWordCrawlJson.entryId, entryId))
+            .limit(1)
+            .get()
+    if(!existingPhrase)
+    {
+        const wordResult = await crawlWord(phrase)
+        db.insert(rawWordCrawlJson)
+            .values({
+                entryId: entryId,
+                json: JSON.stringify(wordResult)
+            })
+            .run()
+    }
 
     const word: string[] = phrase.split('')
         .filter(element => isKanji(element))
@@ -159,7 +169,7 @@ async function crawlFromDatabase() {
         for (const row of entries) {
             entryInsertedTotal++
             console.log(`start crawl ${entryInsertedTotal}/${totalRows} at row ${row.keb}`)
-            await crawl(row.keb)
+            await crawl(row.entryId, row.keb)
         }
     }
 
@@ -180,7 +190,7 @@ async function crawlFromDatabase() {
         lastEntryId = entries[entries.length - 1]!.id
         for (const row of entries) {
             console.log(`start crawl ${entryInsertedTotal}/${totalRows} at row ${row.reb}`)
-            await crawl(row.reb)
+            await crawl(row.entryId, row.reb)
             entryInsertedTotal++
         }
     }
@@ -188,13 +198,13 @@ async function crawlFromDatabase() {
     console.log("DONE!")
 }
 
-async function crawlTest()
-{
-    await crawl("々")
-    await crawl("家")
-    await crawl("家族")
-    await crawl("いちぞく")
-}
+// async function crawlTest()
+// {
+//     await crawl("々")
+//     await crawl("家")
+//     await crawl("家族")
+//     await crawl("いちぞく")
+// }
 
 db.delete(rawWordCrawlJson).run()
 db.delete(rawKanjiCrawlJson).run()
