@@ -9,6 +9,7 @@ import 'dotenv/config'
 import * as schema from '../schemas'
 import { eq, sql, gt, gte, desc } from 'drizzle-orm'
 import { getDatabase } from 'handler'
+import { entry } from '../schemas'
 
 const {
     kEle,
@@ -111,25 +112,18 @@ async function crawl(entryId: number, phrase: string) {
 
 export async function crawlFromDatabase() {
     const db = getDatabase()
-    let chunkLimit = 200
-    let entryInsertedTotal = 0;
-    const totalKeleRows = db
+    let chunkLimit = 100
+    const totalEntry = db
         .select({ value: sql<number>`count(*)` })
-        .from(kEle)
-        .get()?.value!;
-    const totalReleRows = db
-        .select({ value: sql<number>`count(*)` })
-        .from(rEle)
+        .from(entry)
         .get()?.value!;
 
-    const totalRows = totalKeleRows + totalReleRows
-    
     const maxEntryId = db.select()
                             .from(rawWordCrawlJson)
                             .orderBy(desc(rawWordCrawlJson.entryId))
                             .limit(1)
                             .values()
-    let lastEntryId: number = maxEntryId.length > 0 ? maxEntryId[0][1] : -1;
+    let lastEntryId: number = maxEntryId.length > 0 ? maxEntryId[0][1] - 1 : -1;
     console.log(lastEntryId)
 
     while (true) {
@@ -137,7 +131,7 @@ export async function crawlFromDatabase() {
             .select()
             .from(kEle)
             .orderBy(kEle.entryId)
-            .where(gte(kEle.entryId, lastEntryId))
+            .where(gt(kEle.entryId, lastEntryId))
             .limit(chunkLimit)
             .all()
             .values()
@@ -146,7 +140,7 @@ export async function crawlFromDatabase() {
             .select()
             .from(kEle)
             .orderBy(kEle.entryId)
-            .where(gte(kEle.entryId, lastEntryId))
+            .where(gt(kEle.entryId, lastEntryId))
             .limit(chunkLimit)
             .all()
             .values()
@@ -158,12 +152,13 @@ export async function crawlFromDatabase() {
 
         if (entries.length === 0) break
 
-        lastEntryId = entries[entries.length - 1]!.id
-        for (const row of entries) {
-            entryInsertedTotal++
-            console.log(`start crawl ${entryInsertedTotal}/${totalRows} at row ${row.keb}`)
+        lastEntryId = entries[entries.length - 1]!.entryId
+        for (var i =0;i <entries.length;i++) {
+            let row = entries[i]!
+            console.log(`crawling entry ${row.keb} ${i}/${entries.length}`)
             await crawl(row.entryId, row.keb)
         }
+        console.log(`crawled entry ${lastEntryId}/${totalEntry}`)
     }
 
     console.log("DONE!")
