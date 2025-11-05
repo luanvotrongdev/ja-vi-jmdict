@@ -14,7 +14,7 @@ let cachedDb: DrizzleDb | null = null
 
 function resolveDatabasePath(): string {
   const dbPath = path.isAbsolute(process.env.DB_PATH || '')
-    ? process.env.DB_FILE_NAME || ''
+    ? process.env.DB_PATH || ''
     : path.resolve(process.cwd(), process.env.DB_PATH || '')
 
   if (!dbPath) {
@@ -69,15 +69,15 @@ export function resetCrawlTable() {
 
 export async function resetAll() {
     await rm(resolveDatabasePath())
-    await pushSchema(env.DB_FILE_NAME)
+    await pushSchema(env.DB_PATH)
 }
 
 export async function pushSchema(dbFileName: string | undefined): Promise<void> {
   const drizzleEnv: Record<string, string> = {}
   if (dbFileName) {
-    drizzleEnv.DB_FILE_NAME = dbFileName
+    drizzleEnv.DB_PATH = dbFileName
   }
-  await runCommand('npx', ['drizzle-kit', 'push'], drizzleEnv)
+  await runCommand('bunx', ['drizzle-kit', 'push'], drizzleEnv)
 }
 
 export async function runCommand(command: string, args: string[], extraEnv: Record<string, string> = {}) {

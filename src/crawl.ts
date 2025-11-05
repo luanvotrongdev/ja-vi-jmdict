@@ -7,7 +7,7 @@ const JishoAPI = require('unofficial-jisho-api') as unknown as JishoAPICtor
 
 import 'dotenv/config'
 import * as schema from '../schemas'
-import { eq, sql, gt, gte } from 'drizzle-orm'
+import { eq, sql, gt, gte, desc } from 'drizzle-orm'
 import { getDatabase } from 'handler'
 
 const {
@@ -126,22 +126,35 @@ export async function crawlFromDatabase() {
     
     const maxEntryId = db.select()
                             .from(rawWordCrawlJson)
-                            .orderBy(rawWordCrawlJson.entryId)
+                            .orderBy(desc(rawWordCrawlJson.entryId))
                             .limit(1)
                             .values()
-    let lastEntryId: number = maxEntryId.length > 0 ? maxEntryId[0] : -1;
+    let lastEntryId: number = maxEntryId.length > 0 ? maxEntryId[0][1] : -1;
     console.log(lastEntryId)
 
     while (true) {
-        const entries = db
+        const kEntries = db
             .select()
             .from(kEle)
-            .orderBy(kEle.id)
-            .where(gte(kEle.id, lastEntryId))
+            .orderBy(kEle.entryId)
+            .where(gte(kEle.entryId, lastEntryId))
             .limit(chunkLimit)
             .all()
             .values()
             .toArray()
+        const rEntries =db
+            .select()
+            .from(kEle)
+            .orderBy(kEle.entryId)
+            .where(gte(kEle.entryId, lastEntryId))
+            .limit(chunkLimit)
+            .all()
+            .values()
+            .toArray()
+        const entries = [
+            ...kEntries,
+            ...rEntries
+        ]
 
         if (entries.length === 0) break
 
@@ -150,28 +163,6 @@ export async function crawlFromDatabase() {
             entryInsertedTotal++
             console.log(`start crawl ${entryInsertedTotal}/${totalRows} at row ${row.keb}`)
             await crawl(row.entryId, row.keb)
-        }
-    }
-
-    lastEntryId = -1
-    while (true) {
-        const entries = db
-            .select()
-            .from(rEle)
-            .orderBy(rEle.id)
-            .where(gt(rEle.id, lastEntryId))
-            .limit(chunkLimit)
-            .all()
-            .values()
-            .toArray()
-
-        if (entries.length === 0) break
-
-        lastEntryId = entries[entries.length - 1]!.id
-        for (const row of entries) {
-            console.log(`start crawl ${entryInsertedTotal}/${totalRows} at row ${row.reb}`)
-            await crawl(row.entryId, row.reb)
-            entryInsertedTotal++
         }
     }
 

@@ -7,6 +7,7 @@ import { writeJmdictToDatabase } from './jmdict_process'
 import { crawlFromDatabase } from 'crawl'
 import { buildYomitan } from 'build'
 import { closeDatabase, runCommand, resetAll, resetCrawlTable, pushSchema } from 'handler'
+import { rm } from 'node:fs/promises'
 
 type YesNoDefault = true | false
 
@@ -43,7 +44,7 @@ async function jmdict() {
       console.log('Download complete.\n')
     }
 
-    const dbFileName = env.DB_FILE_NAME
+    const dbFileName = env.DB_PATH
     const dbPath = dbFileName
       ? path.isAbsolute(dbFileName)
         ? dbFileName
@@ -58,6 +59,8 @@ async function jmdict() {
 
     if (shouldPush) {
       console.log('\nPushing schema with drizzle-kit...')
+      console.log(dbFileName)
+      await rm(dbFileName!)
       await pushSchema(dbFileName)
       console.log('Schema sync complete.\n')
     }
@@ -81,7 +84,7 @@ async function jmdict() {
     }
   } catch (error) {
     console.error('Flow failed:', error instanceof Error ? error.message : error)
-    exit(1)
+    exit(3)
   } finally {
     rl.close()
   }
@@ -93,6 +96,7 @@ const actions: Record<string, () => Promise<void>> = {
   resetcrawl: async () => { resetCrawlTable() },
   crawl: async () => { await crawlFromDatabase() },
   yomitan: async () => { await buildYomitan() },
+  parse: async () => { await writeJmdictToDatabase() },
 }
 
 const command = process.argv[2]

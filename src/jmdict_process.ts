@@ -10,24 +10,7 @@ type RawNode = unknown
 const {
   entry,
   kEle,
-  keInf,
-  kePri,
   rEle,
-  reRestr,
-  reInf,
-  rePri,
-  sense,
-  stagk,
-  stagr,
-  pos,
-  xref,
-  ant,
-  field,
-  misc,
-  lsource,
-  dial,
-  gloss,
-  example,
 } = schema
 
 function toArray<T>(value: T | T[] | null | undefined): T[] {
@@ -89,7 +72,7 @@ async function getJmdict(): Promise<any> {
 
 export async function writeJmdictToDatabase(): Promise<void> {
   if (!process.env.DB_PATH) {
-    throw new Error('DB_FILE_NAME environment variable is required')
+    throw new Error('DB_PATH environment variable is required')
   }
 
   const jmdict = await getJmdict()
@@ -140,37 +123,7 @@ export async function writeJmdictToDatabase(): Promise<void> {
           if (!kEleRow) {
             throw new Error('Failed to insert k_ele row')
           }
-          const kEleId = kEleRow.id
-
-          toArray(node.ke_inf as RawNode).forEach((info, infoIndex) => {
-            const infoValue = textOf(info)
-            if (infoValue === null) {
-              return
-            }
-            tx
-              .insert(keInf)
-              .values({
-                kEleId,
-                value: infoValue,
-                position: infoIndex,
-              })
-              .run()
-          })
-
-          toArray(node.ke_pri as RawNode).forEach((pri, priIndex) => {
-            const priValue = textOf(pri)
-            if (priValue === null) {
-              return
-            }
-            tx
-              .insert(kePri)
-              .values({
-                kEleId,
-                value: priValue,
-                position: priIndex,
-              })
-              .run()
-          })
+          console.log(`Inserted ${kebValue}`)
         })
 
         const readingElements = toArray(entryRecord.r_ele as RawNode)
@@ -186,306 +139,22 @@ export async function writeJmdictToDatabase(): Promise<void> {
             .values({
               entryId,
               reb: rebValue,
-              noKanji: textOf(node.re_nokanji),
               position: reIndex,
             })
-            .returning({ id: rEle.id })
+            .returning({ id: kEle.id })
             .get()
           if (!rEleRow) {
             throw new Error('Failed to insert r_ele row')
           }
-          const rEleId = rEleRow.id
-
-          toArray(node.re_restr as RawNode).forEach((restr, restrIndex) => {
-            const restrValue = textOf(restr)
-            if (restrValue === null) {
-              return
-            }
-            tx
-              .insert(reRestr)
-              .values({
-                rEleId,
-                value: restrValue,
-                position: restrIndex,
-              })
-              .run()
-          })
-
-          toArray(node.re_inf as RawNode).forEach((info, infoIndex) => {
-            const infoValue = textOf(info)
-            if (infoValue === null) {
-              return
-            }
-            tx
-              .insert(reInf)
-              .values({
-                rEleId,
-                value: infoValue,
-                position: infoIndex,
-              })
-              .run()
-          })
-
-          toArray(node.re_pri as RawNode).forEach((pri, priIndex) => {
-            const priValue = textOf(pri)
-            if (priValue === null) {
-              return
-            }
-            tx
-              .insert(rePri)
-              .values({
-                rEleId,
-                value: priValue,
-                position: priIndex,
-              })
-              .run()
-          })
-        })
-
-        const senseNodes = toArray(entryRecord.sense as RawNode)
-        senseNodes.forEach((senseNode, senseIndex) => {
-          const node = senseNode as Record<string, unknown>
-          const senseRow = tx
-            .insert(sense)
-            .values({
-              entryId,
-              senseIndex,
-            })
-            .returning({ id: sense.id })
-            .get()
-          if (!senseRow) {
-            throw new Error('Failed to insert sense row')
-          }
-          const senseId = senseRow.id
-
-          toArray(node.stagk as RawNode).forEach((value, idx) => {
-            const text = textOf(value)
-            if (text === null) {
-              return
-            }
-            tx
-              .insert(stagk)
-              .values({
-                senseId,
-                value: text,
-                position: idx,
-              })
-              .run()
-          })
-
-          toArray(node.stagr as RawNode).forEach((value, idx) => {
-            const text = textOf(value)
-            if (text === null) {
-              return
-            }
-            tx
-              .insert(stagr)
-              .values({
-                senseId,
-                value: text,
-                position: idx,
-              })
-              .run()
-          })
-
-          toArray(node.pos as RawNode).forEach((value, idx) => {
-            const text = textOf(value)
-            if (text === null) {
-              return
-            }
-            tx
-              .insert(pos)
-              .values({
-                senseId,
-                value: text,
-                position: idx,
-              })
-              .run()
-          })
-
-          toArray(node.xref as RawNode).forEach((value, idx) => {
-            const text = textOf(value)
-            if (text === null) {
-              return
-            }
-            tx
-              .insert(xref)
-              .values({
-                senseId,
-                value: text,
-                position: idx,
-              })
-              .run()
-          })
-
-          toArray(node.ant as RawNode).forEach((value, idx) => {
-            const text = textOf(value)
-            if (text === null) {
-              return
-            }
-            tx
-              .insert(ant)
-              .values({
-                senseId,
-                value: text,
-                position: idx,
-              })
-              .run()
-          })
-
-          toArray(node.field as RawNode).forEach((value, idx) => {
-            const text = textOf(value)
-            if (text === null) {
-              return
-            }
-            tx
-              .insert(field)
-              .values({
-                senseId,
-                value: text,
-                position: idx,
-              })
-              .run()
-          })
-
-          toArray(node.misc as RawNode).forEach((value, idx) => {
-            const text = textOf(value)
-            if (text === null) {
-              return
-            }
-            tx
-              .insert(misc)
-              .values({
-                senseId,
-                value: text,
-                position: idx,
-              })
-              .run()
-          })
-
-          toArray(node.s_inf as RawNode).forEach((value, idx) => {
-            const text = textOf(value)
-            if (text === null) {
-              return
-            }
-            tx
-              .insert(senseInfo)
-              .values({
-                senseId,
-                value: text,
-                position: idx,
-              })
-              .run()
-          })
-
-          toArray(node.lsource as RawNode).forEach((value, idx) => {
-            const text = textOf(value)
-            tx
-              .insert(lsource)
-              .values({
-                senseId,
-                value: text,
-                language: attrOf(value, 'xml:lang'),
-                sourceType: attrOf(value, 'ls_type'),
-                wasei: attrOf(value, 'ls_wasei'),
-                position: idx,
-              })
-              .run()
-          })
-
-          toArray(node.dial as RawNode).forEach((value, idx) => {
-            const text = textOf(value)
-            if (text === null) {
-              return
-            }
-            tx
-              .insert(dial)
-              .values({
-                senseId,
-                value: text,
-                position: idx,
-              })
-              .run()
-          })
-
-          const glossNodes = toArray(node.gloss as RawNode)
-          glossNodes.forEach((value, idx) => {
-            const text = textOf(value)
-            const glossRow = tx
-              .insert(gloss)
-              .values({
-                senseId,
-                value: text,
-                language: attrOf(value, 'xml:lang'),
-                gender: attrOf(value, 'g_gend'),
-                glossType: attrOf(value, 'g_type'),
-                position: idx,
-              })
-              .returning({ id: gloss.id })
-              .get()
-            if (!glossRow) {
-              throw new Error('Failed to insert gloss row')
-            }
-            const glossId = glossRow.id
-
-            toArray((value as Record<string, unknown>)?.pri as RawNode).forEach((pri, priIndex) => {
-              const priValue = textOf(pri)
-              if (priValue === null) {
-                return
-              }
-              tx
-                .insert(glossPriority)
-                .values({
-                  glossId,
-                  value: priValue,
-                  position: priIndex,
-                })
-                .run()
-            })
-          })
-
-          const examples = toArray(node.example as RawNode)
-          examples.forEach((exampleNode, exampleIndex) => {
-            const exampleRecord = exampleNode as Record<string, unknown>
-            const exampleRow = tx
-              .insert(example)
-              .values({
-                senseId,
-                source: textOf(exampleRecord.ex_srce),
-                sourceType: attrOf(exampleRecord.ex_srce, 'exsrc_type'),
-                termText: textOf(exampleRecord.ex_text),
-                position: exampleIndex,
-              })
-              .returning({ id: example.id })
-              .get()
-            if (!exampleRow) {
-              throw new Error('Failed to insert example row')
-            }
-            const exampleId = exampleRow.id
-
-            toArray(exampleRecord.ex_sent as RawNode).forEach((sentenceNode, sentenceIndex) => {
-              const sentenceValue = textOf(sentenceNode)
-              if (sentenceValue === null) {
-                return
-              }
-              tx
-                .insert(exampleSentence)
-                .values({
-                  exampleId,
-                  language: attrOf(sentenceNode, 'xml:lang'),
-                  value: sentenceValue,
-                  position: sentenceIndex,
-                })
-                .run()
-            })
-          })
+          console.log(`Inserted ${rebValue}`)
         })
       })
     })
 
     console.log('JMdict import complete.')
-  } finally {
-    exit(1)
+  } catch(ex) {
+    console.error(ex)
+    exit(2)
   }
 }
 

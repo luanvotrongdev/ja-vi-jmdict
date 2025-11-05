@@ -22,7 +22,8 @@
             "name": "Debug process Script",
             "runtimeArgs": [
                 "run",
-                "src/jmdict_process"
+                "main",
+                "parse"
             ],
             "cwd": "${workspaceFolder}",
             "internalConsoleOptions": "neverOpen"
