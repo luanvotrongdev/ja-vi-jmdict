@@ -32,6 +32,17 @@ async function randomSleep() {
     await sleep(ms)
 }
 
+const BAR_WIDTH = 30
+function printProgress(prefix: string, current: number, total: number, extra?: string) {
+    const ratio = total ? current / total : 0
+    const filled = Math.round(BAR_WIDTH * ratio)
+    const empty = BAR_WIDTH - filled
+    const percent = Math.floor(ratio * 100)
+    const bar = '='.repeat(filled) + '-'.repeat(empty)
+    const suffix = extra ? ` ${extra}` : ''
+    process.stdout.write(`\r${prefix} [${bar}] ${current}/${total} ${percent}%${suffix}`)
+}
+
 function isKanji(char: string): boolean {
     if (!char) return false
     const code = char.charCodeAt(0)
@@ -124,7 +135,6 @@ export async function crawlFromDatabase() {
                             .limit(1)
                             .values()
     let lastEntryId: number = maxEntryId.length > 0 ? maxEntryId[0][1] - 1 : -1;
-    console.log(lastEntryId)
 
     while (true) {
         const kEntries = db
@@ -153,12 +163,14 @@ export async function crawlFromDatabase() {
         if (entries.length === 0) break
 
         lastEntryId = entries[entries.length - 1]!.entryId
+        printProgress('crawled entry', lastEntryId, totalEntry)
+        console.log('')
         for (var i =0;i <entries.length;i++) {
             let row = entries[i]!
-            console.log(`crawling entry ${row.keb} ${i}/${entries.length}`)
+            printProgress('Crawling entries', i + 1, entries.length, row.keb)
+            console.log('')
             await crawl(row.entryId, row.keb)
         }
-        console.log(`crawled entry ${lastEntryId}/${totalEntry}`)
     }
 
     console.log("DONE!")
