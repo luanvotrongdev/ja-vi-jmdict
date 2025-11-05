@@ -19,8 +19,8 @@ const {
     entry,
     kEle,
     rEle,
-    sense,
-    gloss,
+    rawWordCrawlJson,
+    rawKanjiCrawlJson
 } = schema
 
 const kanjiPattern = /^[\u4E00-\u9FAF\u3400-\u4DBF]+$/u
@@ -52,8 +52,33 @@ const db = drizzle(sqlite, { schema })
 
 const jisho = new JishoAPI()
 
-async function crawlKanji(kanji: string, jishoResult: KanjiParseResult)
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function randomSleep(minMs: number, maxMs: number) {
+  const ms = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+  await sleep(ms);
+}
+
+function isKanji(char: string): boolean {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  return (
+    (code >= 0x4e00 && code <= 0x9fff) ||  // CJK Unified Ideographs
+    (code >= 0x3400 && code <= 0x4dbf) ||  // CJK Extension A
+    (code >= 0x20000 && code <= 0x2a6df) || // Extension B
+    (code >= 0x2a700 && code <= 0x2b73f) || // Extension C
+    (code >= 0x2b740 && code <= 0x2b81f) || // Extension D
+    (code >= 0x2b820 && code <= 0x2ceaf) || // Extension E
+    (code >= 0x2ceb0 && code <= 0x2ebef)    // Extension F
+  );
+}
+
+async function crawlKanji(kanji: string)
 {
+    randomSleep(1000, 3000)
+    const jishoResult = await jisho.searchForKanji(kanji)
     const maziiKanji = await searchMaziiKanji(kanji)
     return {
         type: "kanji",
@@ -62,8 +87,10 @@ async function crawlKanji(kanji: string, jishoResult: KanjiParseResult)
     }
 }
 
-async function crawlWord(word: string, jishoResult: JishoAPIResult)
+async function crawlWord(word: string)
 {
+    randomSleep(1000, 3000)
+    const jishoResult = await jisho.searchForPhrase(word)
     const maziiWord = await searchMaziiWord(word)
     return {
         type: "word",
@@ -72,18 +99,40 @@ async function crawlWord(word: string, jishoResult: JishoAPIResult)
     }
 }
 
-async function crawl(word: string)
+async function crawl(phrase: string)
 {
-    // var kanjiParseResult = await jisho.searchForKanji(word)
-    // if(kanjiParseResult.found)
-    //     return crawlKanji(word, kanjiParseResult)
-    var wordParseResult = await jisho.searchForPhrase(word)
-    return crawlWord(word, wordParseResult)
+    const wordResult = await crawlWord(phrase)
+    db.insert(rawWordCrawlJson)
+            .values({
+                json: JSON.stringify(wordResult)
+            })
+            .run()
+
+    const word: string[] = phrase.split('')
+                                .filter(element => isKanji(element))
+    for(var i =0;i<word.length;i++)
+    {
+        const existing = db
+                        .select({ id: rawKanjiCrawlJson.id })
+                        .from(rawKanjiCrawlJson)
+                        .where(eq(rawKanjiCrawlJson.id, word[i]!))
+                        .limit(1)
+                        .get()
+        if(existing) continue
+        const kanjiResult = await crawlKanji(word[i]!)
+        db.insert(rawKanjiCrawlJson)
+            .values({
+                id: word[i]!,
+                json: JSON.stringify(kanjiResult)
+            })
+            .run()
+        console.log(`INSERT ${word[i]}`)
+    }
 }
 
+await crawl("々")
+await crawl("家")
+await crawl("家族")
+await crawl("いちぞく")
 
-const result = await crawl("家")
-console.log(JSON.stringify(result))
-// crawl("家族")
-// crawl("いちぞく")
-
+sqlite.close()

@@ -171,7 +171,7 @@ export const exampleSentence = sqliteTable('ex_sent', {
 
 export const rawWordCrawlJson = sqliteTable('raw_word_crawl_json', {
     id: int('id').primaryKey(),
-    entryId: int('entry_id').notNull().references(() => entry.id, { onDelete: 'cascade' }),
+    // entryId: int('entry_id').notNull().references(() => entry.id, { onDelete: 'cascade' }),
     json: text('json').notNull(),
 })
 
