@@ -111,3 +111,68 @@ export interface MaziiKanjiSearchResponse {
   results: MaziiKanjiResult[]
   total: number
 }
+
+export interface MaziiWordExample {
+  content: string
+  mean: string
+  transcription: string
+}
+
+export interface MaziiWordMeaning {
+  mean: string
+  kind: string | null
+  examples: MaziiWordExample[]
+}
+
+export interface MaziiSynsetEntry {
+  definition_id: string
+  synonym: string[]
+}
+
+export interface MaziiSynset {
+  pos: string
+  base_form: string
+  entry: MaziiSynsetEntry[]
+}
+
+export interface MaziiPronunciationToken {
+  type: string
+  value: string
+}
+
+export interface MaziiPronunciation {
+  kana: string
+  accent: string
+  tokenizedKana: MaziiPronunciationToken[]
+}
+
+export interface MaziiWordResult {
+  _id: string
+  _rev: string
+  word: string
+  phonetic: string
+  weight: number
+  short_mean: string
+  mobileId: number
+  label: string
+  lang: string
+  means: MaziiWordMeaning[]
+  synsets: MaziiSynset[]
+  type: string
+  opposite_word?: string[]
+  pronunciation?: MaziiPronunciation[]
+  images?: string[]
+  [key: string]: unknown
+}
+
+export interface MaziiWordSearchPayload {
+  suggestWords: string[]
+  words: MaziiWordResult[]
+  [key: string]: unknown
+}
+
+export interface MaziiWordSearchResponse {
+  status: number
+  data: MaziiWordSearchPayload
+  [key: string]: unknown
+}

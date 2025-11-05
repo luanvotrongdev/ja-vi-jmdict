@@ -1,5 +1,5 @@
 import { createRequire } from 'module'
-import { searchMaziiKanji } from 'api'
+import { searchMaziiKanji, searchMaziiWord } from 'api'
 const require = createRequire(import.meta.url)
 type JishoAPICtor = new () => import('unofficial-jisho-api').default
 // Fall back to the CommonJS build; the ESM bundle expects cheerio to expose a default export.
@@ -9,13 +9,13 @@ const jisho = new JishoAPI()
 
 async function crawl(word: string)
 {
+    const maziiWord = await searchMaziiWord(word)
     const maziiKanji = await searchMaziiKanji(word)
-
     const wordResult = await jisho.searchForPhrase(word)
-
     const kanjiResult = await jisho.searchForKanji(word)
 
     const result = {
+        maziiWord,
         maziiKanji,
         wordResult,
         kanjiResult
