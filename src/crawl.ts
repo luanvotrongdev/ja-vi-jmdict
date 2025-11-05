@@ -22,25 +22,34 @@ const jisho = new JishoAPI()
 const minMs: number = Number.parseInt(process.env.MIN_CRAWL_SLEEP!)
 const maxMs: number = Number.parseInt(process.env.MAX_CRAWL_SLEEP!)
 
+let entryRatio = 0
+let overallRatio = 0
+
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 async function randomSleep() {
     const ms = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs
-    console.log(`  ~ will sleep ${ms} then `)
+    console.log(`will sleep ${ms} then `)
     await sleep(ms)
 }
 
 const BAR_WIDTH = 30
-function printProgress(prefix: string, current: number, total: number, extra?: string) {
-    const ratio = total ? current / total : 0
+function printProgress(prefix: string, ratio: number) {
     const filled = Math.round(BAR_WIDTH * ratio)
     const empty = BAR_WIDTH - filled
     const percent = Math.floor(ratio * 100)
     const bar = '='.repeat(filled) + '-'.repeat(empty)
-    const suffix = extra ? ` ${extra}` : ''
-    process.stdout.write(`\r${prefix} [${bar}] ${current}/${total} ${percent}%${suffix}`)
+    process.stdout.write(`\r${prefix} [${bar}] ${percent}%\n`)
+}
+
+function printOverallProcess(message: string)
+{
+    process.stdout.write('\x1b[2J\x1b[H')
+    console.log(`           ${message}`)
+    printProgress(`  ENTRY`, entryRatio)
+    printProgress(`OVERALL`, overallRatio)
 }
 
 function isKanji(char: string): boolean {
@@ -62,7 +71,7 @@ async function crawlKanji(kanji: string) {
     const jishoResult = await jisho.searchForKanji(kanji)
     const maziiKanji = await searchMaziiKanji(kanji)
 
-    console.log(`  * start query kanji ${kanji}`)
+    printOverallProcess(`* start query kanji ${kanji}`)
     return {
         type: "kanji",
         mazii: maziiKanji,
@@ -75,7 +84,7 @@ async function crawlWord(word: string) {
     const jishoResult = await jisho.searchForPhrase(word)
     const maziiWord = await searchMaziiWord(word)
 
-    console.log(`  - start query word ${word}`)
+    printOverallProcess(`- start query word ${word}`)
     return {
         type: "word",
         mazii: maziiWord,
@@ -122,6 +131,7 @@ async function crawl(entryId: number, phrase: string) {
 }
 
 export async function crawlFromDatabase() {
+    process.stdout.write('\x1b[2J\x1b[H')
     const db = getDatabase()
     let chunkLimit = 100
     const totalEntry = db
@@ -134,7 +144,7 @@ export async function crawlFromDatabase() {
                             .orderBy(desc(rawWordCrawlJson.entryId))
                             .limit(1)
                             .values()
-    let lastEntryId: number = maxEntryId.length > 0 ? maxEntryId[0][1] - 1 : -1;
+    let lastEntryId: number = maxEntryId.length > 0 ? maxEntryId[0]![1] - 1 : -1;
 
     while (true) {
         const kEntries = db
@@ -163,12 +173,10 @@ export async function crawlFromDatabase() {
         if (entries.length === 0) break
 
         lastEntryId = entries[entries.length - 1]!.entryId
-        printProgress('crawled entry', lastEntryId, totalEntry)
-        console.log('')
+        overallRatio = lastEntryId / totalEntry
         for (var i =0;i <entries.length;i++) {
             let row = entries[i]!
-            printProgress('Crawling entries', i + 1, entries.length, row.keb)
-            console.log('')
+            overallRatio = (i + 1) / entries.length
             await crawl(row.entryId, row.keb)
         }
     }

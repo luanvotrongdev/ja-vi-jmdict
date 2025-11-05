@@ -100,7 +100,6 @@ const actions: Record<string, () => Promise<void>> = {
 }
 
 const command = process.argv[2]
-console.log(command)
 const action = command ? actions[command] : undefined
 
 if (!action) {
