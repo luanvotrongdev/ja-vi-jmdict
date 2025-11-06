@@ -22,6 +22,10 @@ const jisho = new JishoAPI()
 const minMs: number = Number.parseInt(process.env.MIN_CRAWL_SLEEP!)
 const maxMs: number = Number.parseInt(process.env.MAX_CRAWL_SLEEP!)
 
+let totalEntry
+let currentEntry
+let totalSubEntry
+let currentSubEntry
 let entryRatio = 0
 let overallRatio = 0
 
@@ -79,14 +83,14 @@ async function crawlKanji(kanji: string) {
     }
 }
 
-async function crawlWord(word: string) {
+async function crawlPhrase(word: string) {
     await randomSleep()
     const jishoResult = await jisho.searchForPhrase(word)
     const maziiWord = await searchMaziiWord(word)
 
-    printOverallProcess(`- start query word ${word}`)
+    printOverallProcess(`- start query phrase ${word}`)
     return {
-        type: "word",
+        type: "phrase",
         mazii: maziiWord,
         jisho: jishoResult
     }
@@ -101,7 +105,7 @@ async function crawl(entryId: number, phrase: string) {
         .limit(1)
         .get()
     if (!existingPhrase) {
-        const wordResult = await crawlWord(phrase)
+        const wordResult = await crawlPhrase(phrase)
         db.insert(rawWordCrawlJson)
             .values({
                 entryId: entryId,
@@ -148,7 +152,7 @@ export async function crawlFromDatabase() {
 
     while (true) {
         const kEntries = db
-            .select()
+            .select({text: kEle.keb, entryId: kEle.entryId})
             .from(kEle)
             .orderBy(kEle.entryId)
             .where(gt(kEle.entryId, lastEntryId))
@@ -157,10 +161,10 @@ export async function crawlFromDatabase() {
             .values()
             .toArray()
         const rEntries =db
-            .select()
-            .from(kEle)
-            .orderBy(kEle.entryId)
-            .where(gt(kEle.entryId, lastEntryId))
+            .select({text: rEle.reb, entryId: rEle.entryId})
+            .from(rEle)
+            .orderBy(rEle.entryId)
+            .where(gt(rEle.entryId, lastEntryId))
             .limit(chunkLimit)
             .all()
             .values()
@@ -177,7 +181,7 @@ export async function crawlFromDatabase() {
         for (var i =0;i <entries.length;i++) {
             let row = entries[i]!
             overallRatio = (i + 1) / entries.length
-            await crawl(row.entryId, row.keb)
+            await crawl(row.entryId, row.text)
         }
     }
 
