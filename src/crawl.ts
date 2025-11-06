@@ -22,12 +22,12 @@ const jisho = new JishoAPI()
 const minMs: number = Number.parseInt(process.env.MIN_CRAWL_SLEEP!)
 const maxMs: number = Number.parseInt(process.env.MAX_CRAWL_SLEEP!)
 
-let totalEntry
-let currentEntry
-let totalSubEntry
-let currentSubEntry
-let entryRatio = 0
-let overallRatio = 0
+let currentPhrase: string = ""
+let currentKanji: string = ""
+let totalEntry : number = 0
+let currentEntry : number = 0
+let totalSubEntry : number = 0
+let currentSubEntry : number = 0
 
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
@@ -35,7 +35,7 @@ function sleep(ms: number) {
 
 async function randomSleep() {
     const ms = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs
-    console.log(`will sleep ${ms} then `)
+    console.log(`           ${ms} SLEEP`)
     await sleep(ms)
 }
 
@@ -48,12 +48,14 @@ function printProgress(prefix: string, ratio: number) {
     process.stdout.write(`\r${prefix} [${bar}] ${percent}%\n`)
 }
 
-function printOverallProcess(message: string)
+function printOverallProcess()
 {
     process.stdout.write('\x1b[2J\x1b[H')
-    console.log(`           ${message}`)
-    printProgress(`  ENTRY`, entryRatio)
-    printProgress(`OVERALL`, overallRatio)
+    console.log("")
+    console.log(` QUERYING  ${currentKanji} in ${currentPhrase}`)
+    printProgress(`    ENTRY `, currentEntry/totalEntry)
+    printProgress(`  OVERALL `, currentSubEntry/totalSubEntry)
+    console.log(`           ${currentSubEntry}/${totalSubEntry} phrases in ${currentEntry}/${totalEntry} entries`)
 }
 
 function isKanji(char: string): boolean {
@@ -75,7 +77,7 @@ async function crawlKanji(kanji: string) {
     const jishoResult = await jisho.searchForKanji(kanji)
     const maziiKanji = await searchMaziiKanji(kanji)
 
-    printOverallProcess(`* start query kanji ${kanji}`)
+    printOverallProcess()
     return {
         type: "kanji",
         mazii: maziiKanji,
@@ -88,7 +90,7 @@ async function crawlPhrase(word: string) {
     const jishoResult = await jisho.searchForPhrase(word)
     const maziiWord = await searchMaziiWord(word)
 
-    printOverallProcess(`- start query phrase ${word}`)
+    printOverallProcess()
     return {
         type: "phrase",
         mazii: maziiWord,
@@ -97,6 +99,7 @@ async function crawlPhrase(word: string) {
 }
 
 async function crawl(entryId: number, phrase: string) {
+    currentPhrase = phrase
     const db = getDatabase()
     const existingPhrase = db
         .select({ entryId: rawWordCrawlJson.entryId })
@@ -117,54 +120,62 @@ async function crawl(entryId: number, phrase: string) {
     const word: string[] = phrase.split('')
         .filter(element => isKanji(element))
     for (var i = 0; i < word.length; i++) {
+        currentKanji = word[i]!
         const existing = db
             .select({ id: rawKanjiCrawlJson.id })
             .from(rawKanjiCrawlJson)
-            .where(eq(rawKanjiCrawlJson.textId, word[i]!))
+            .where(eq(rawKanjiCrawlJson.textId, currentKanji))
             .limit(1)
             .get()
         if (existing) continue
-        const kanjiResult = await crawlKanji(word[i]!)
+        const kanjiResult = await crawlKanji(currentKanji)
         db.insert(rawKanjiCrawlJson)
             .values({
-                textId: word[i]!,
+                textId: currentKanji,
                 json: JSON.stringify(kanjiResult)
             })
             .run()
     }
 }
 
-export async function crawlFromDatabase() {
-    process.stdout.write('\x1b[2J\x1b[H')
+async function getLatestEntryId() : Promise<number>
+{
     const db = getDatabase()
-    let chunkLimit = 100
-    const totalEntry = db
-        .select({ value: sql<number>`count(*)` })
-        .from(entry)
-        .get()?.value!;
-
     const maxEntryId = db.select()
                             .from(rawWordCrawlJson)
                             .orderBy(desc(rawWordCrawlJson.entryId))
                             .limit(1)
                             .values()
-    let lastEntryId: number = maxEntryId.length > 0 ? maxEntryId[0]![1] - 1 : -1;
+    return maxEntryId.length > 0 ? 
+                maxEntryId[0]![1] - 1 //decrease 1 because we want to rerun
+                : 0;
+}
 
-    while (true) {
-        const kEntries = db
+export async function crawlFromDatabase() {
+    process.stdout.write('\x1b[2J\x1b[H')
+    const db = getDatabase()
+    let chunkLimit = 50
+    totalEntry = db
+        .select({ value: sql<number>`count(*)` })
+        .from(entry)
+        .get()?.value!;
+
+    while (currentEntry != totalEntry) {
+        currentEntry = await getLatestEntryId()
+        const kEntries : any = db
             .select({text: kEle.keb, entryId: kEle.entryId})
             .from(kEle)
             .orderBy(kEle.entryId)
-            .where(gt(kEle.entryId, lastEntryId))
+            .where(gt(kEle.entryId, currentEntry))
             .limit(chunkLimit)
             .all()
             .values()
             .toArray()
-        const rEntries =db
+        const rEntries : any =db
             .select({text: rEle.reb, entryId: rEle.entryId})
             .from(rEle)
             .orderBy(rEle.entryId)
-            .where(gt(rEle.entryId, lastEntryId))
+            .where(gt(rEle.entryId, currentEntry))
             .limit(chunkLimit)
             .all()
             .values()
@@ -173,17 +184,13 @@ export async function crawlFromDatabase() {
             ...kEntries,
             ...rEntries
         ]
-
-        if (entries.length === 0) break
-
-        lastEntryId = entries[entries.length - 1]!.entryId
-        overallRatio = lastEntryId / totalEntry
-        for (var i =0;i <entries.length;i++) {
-            let row = entries[i]!
-            overallRatio = (i + 1) / entries.length
+        totalSubEntry = entries.length
+        if (totalSubEntry === 0) continue
+        for (currentSubEntry =0;currentSubEntry <totalSubEntry;currentSubEntry++) {
+            let row = entries[currentSubEntry]!
             await crawl(row.entryId, row.text)
         }
     }
 
-    console.log("DONE!")
+    console.log("CRAWL DONE!")
 }
