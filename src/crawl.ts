@@ -54,7 +54,7 @@ function printOverallProcess()
     console.log("")
     console.log(` QUERYING  ${currentKanji} in ${currentPhrase}`)
     printProgress(`    ENTRY `, currentEntry/totalEntry)
-    printProgress(`  OVERALL `, currentSubEntry/totalSubEntry)
+    printProgress(`   PHRASE `, currentSubEntry/totalSubEntry)
     console.log(`           ${currentSubEntry}/${totalSubEntry} phrases in ${currentEntry}/${totalEntry} entries`)
 }
 
