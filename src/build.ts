@@ -8,9 +8,7 @@ import { getDatabase } from 'handler';
 const {
     entry,
     kEle,
-    rEle,
-    sense,
-    gloss,
+    rEle
 } = schema
 
 const kanjiPattern = /^[\u4E00-\u9FAF\u3400-\u4DBF]+$/u

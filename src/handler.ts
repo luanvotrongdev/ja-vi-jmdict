@@ -3,7 +3,7 @@ import path from 'path'
 import * as schema from '../schemas'
 import { Database } from 'bun:sqlite'
 import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
-import { entry, rawKanjiCrawlJson, rawWordCrawlJson } from '../schemas'
+import { rawKanjiCrawlJson, rawWordCrawlJson } from '../schemas'
 import { cwd, env } from 'process'
 import { rm } from 'fs/promises'
 
@@ -12,7 +12,7 @@ type DrizzleDb = BunSQLiteDatabase<typeof schema>
 let sqliteInstance: Database | null = null
 let cachedDb: DrizzleDb | null = null
 
-function resolveDatabasePath(): string {
+export function resolveDatabasePath(): string {
   const dbPath = path.isAbsolute(process.env.DB_PATH || '')
     ? process.env.DB_PATH || ''
     : path.resolve(process.cwd(), process.env.DB_PATH || '')
@@ -69,7 +69,7 @@ export function resetCrawlTable() {
 
 export async function resetAll() {
     await rm(resolveDatabasePath())
-    await pushSchema(env.DB_PATH)
+    await pushSchema(resolveDatabasePath())
 }
 
 export async function pushSchema(dbFileName: string | undefined): Promise<void> {

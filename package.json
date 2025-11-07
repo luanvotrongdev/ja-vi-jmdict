@@ -4,11 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "main": "bun run src/main",
-    "fetch": "bun run src/downloader",
-    "process": "bun run src/jmdict_process",
-    "crawl": "bun run src/crawl",
-    "build": "bun run src/build"
+    "main": "bun --env-file=.dev.env run src/main"
   },
   "devDependencies": {
     "@types/bun": "^1.3.1",

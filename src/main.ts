@@ -1,13 +1,16 @@
 import 'dotenv/config'
-import { cwd, env, exit } from 'node:process'
-import path from 'node:path'
+import { exit } from 'node:process'
 import { createInterface } from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process'
 import { writeJmdictToDatabase } from './jmdict_process'
 import { crawlFromDatabase } from 'crawl'
 import { buildYomitan } from 'build'
-import { closeDatabase, runCommand, resetAll, resetCrawlTable, pushSchema } from 'handler'
-import { rm } from 'node:fs/promises'
+import { 
+  closeDatabase, 
+  runCommand, 
+  resetAll, 
+  resetCrawlTable, 
+  resolveDatabasePath } from 'handler'
 
 type YesNoDefault = true | false
 
@@ -44,13 +47,6 @@ async function jmdict() {
       console.log('Download complete.\n')
     }
 
-    const dbFileName = env.DB_PATH
-    const dbPath = dbFileName
-      ? path.isAbsolute(dbFileName)
-        ? dbFileName
-        : path.resolve(cwd(), dbFileName)
-      : undefined
-
     const shouldPush = await promptYesNo(
       rl,
       'Sync database schema with drizzle-kit?',
@@ -59,15 +55,13 @@ async function jmdict() {
 
     if (shouldPush) {
       console.log('\nPushing schema with drizzle-kit...')
-      console.log(dbFileName)
-      await rm(dbFileName!)
-      await pushSchema(dbFileName)
+      await resetAll()
       console.log('Schema sync complete.\n')
     }
 
     const shouldRegenerate = await promptYesNo(
       rl,
-      `Regenerate JMdict data in ${dbPath ?? 'configured database'}?`,
+      `Regenerate JMdict data in ${resolveDatabasePath() ?? 'configured database'}?`,
       true,
     )
 
