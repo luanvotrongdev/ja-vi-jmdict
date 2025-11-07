@@ -46,7 +46,8 @@
             "name": "Debug build Script",
             "runtimeArgs": [
                 "run",
-                "src/build"
+                "main",
+                "yomitan"
             ],
             "cwd": "${workspaceFolder}",
             "internalConsoleOptions": "neverOpen"

@@ -71,10 +71,6 @@ async function getJmdict(): Promise<any> {
 
 
 export async function writeJmdictToDatabase(): Promise<void> {
-  if (!process.env.DB_PATH) {
-    throw new Error('DB_PATH environment variable is required')
-  }
-
   const jmdict = await getJmdict()
   if (!jmdict?.entry) {
     throw new Error('JMdict payload does not contain any entries')

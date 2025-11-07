@@ -1,173 +1,148 @@
 import 'dotenv/config'
 import { Dictionary, DictionaryIndex, KanjiEntry, TermEntry } from "yomichan-dict-builder";
 import * as schema from '../schemas'
-import { eq, gt, inArray, sql } from 'drizzle-orm';
+import { eq, gt, sql } from 'drizzle-orm';
 import type { DetailedDefinition } from 'yomichan-dict-builder/dist/types/yomitan/termbank';
 import { getDatabase } from 'handler';
+import type { JishoAPIResult, JishoWordSense, KanjiParseResult } from 'unofficial-jisho-api';
+import type { MaziiKanjiResult, MaziiWordResult, MaziiWordSearchPayload } from '../schemas/api';
 
 const {
-    entry,
-    kEle,
-    rEle
+    rawKanjiCrawlJson,
+    rawWordCrawlJson
 } = schema
 
-const kanjiPattern = /^[\u4E00-\u9FAF\u3400-\u4DBF]+$/u
-
-type EntryLookups = {
-    kanji: Map<number, string[]>;
-    readings: Map<number, string[]>;
-    definitions: Map<number, DetailedDefinition[]>;
+function insertMaziiPhrase(termEntry: TermEntry, maziiPhrase: MaziiWordSearchPayload) {
+    if (!maziiPhrase.words) return
+    if (maziiPhrase.words.length == 0) return
+    const word = maziiPhrase.words[0]
+    if (!word) return
+    termEntry.setTerm(maziiPhrase.words[0]!.word)
+    maziiPhrase.words[0]!
+        .means
+        .forEach((mean: any) => {
+            termEntry.addDetailedDefinition(mean.mean!)
+        });
 }
 
-function buildLookups(entryIds: number[]): EntryLookups {
-    const lookups: EntryLookups = {
-        kanji: new Map(),
-        readings: new Map(),
-        definitions: new Map(),
-    }
-
-    if (entryIds.length === 0) {
-        return lookups
-    }
-
-    const db = getDatabase()
-    const kanjiRows = db
-        .select()
-        .from(kEle)
-        .where(inArray(kEle.entryId, entryIds))
-        .all()
-    kanjiRows.forEach(({ entryId, keb }) => {
-        if (!keb) return;
-        const list = lookups.kanji.get(entryId) ?? [];
-        list.push(keb);
-        lookups.kanji.set(entryId, list);
-    })
-
-    const readingRows = db
-        .select()
-        .from(rEle)
-        .where(inArray(rEle.entryId, entryIds))
-        .all()
-    readingRows.forEach(({ entryId, reb }) => {
-        if (!reb) return;
-        const list = lookups.readings.get(entryId) ?? [];
-        list.push(reb);
-        lookups.readings.set(entryId, list);
-    })
-
-    const meaningRows = db
-        .select()
-        .from(sense)
-        .leftJoin(gloss, eq(sense.id, gloss.senseId))
-        .where(inArray(sense.entryId, entryIds))
-        .all()
-
-    const meaningTextByEntry = new Map<number, Set<string>>()
-    meaningRows.forEach(({ sense: senseRow, gloss: glossRow }) => {
-        const entryId = senseRow?.entryId
-        if (entryId == null) return
-        const text = glossRow?.value?.trim()
-        if (!text) return
-        const bucket = meaningTextByEntry.get(entryId) ?? new Set<string>()
-        bucket.add(text)
-        meaningTextByEntry.set(entryId, bucket)
-    })
-
-    meaningTextByEntry.forEach((texts, entryId) => {
-        const definitions = Array.from(texts).map(
-            (text) => ({ type: 'text', text } as DetailedDefinition),
-        )
-        lookups.definitions.set(entryId, definitions)
-    });
-
-    return lookups;
+function insertJishoPhrase(termEntry: TermEntry, jishoPhrase: JishoAPIResult) {
+    if (jishoPhrase.meta.status != 200) return
+    if (!jishoPhrase.data) return
+    if (jishoPhrase.data.length == 0) return
+    const word = jishoPhrase.data[0]
+    termEntry.setTerm(word?.slug!)
+    if (word?.japanese.length! > 0)
+        termEntry.setReading(word?.japanese[0]?.reading!)
+    word?.senses
+        .forEach((mean: JishoWordSense) => {
+            termEntry.addDetailedDefinitions(mean.english_definitions.map(d => d))
+        });
 }
 
-async function insertEntry(
+function insertPhrase(
     dictionary: Dictionary,
-    entryRow: typeof entry.$inferSelect,
-    lookups: EntryLookups
+    entryRow: typeof rawWordCrawlJson.$inferSelect,
 ) {
-    const entryId = entryRow.id
-    const kanjiTerms = lookups.kanji.get(entryId) ?? []
-    const readingTerms = lookups.readings.get(entryId) ?? []
-    const definitionList = lookups.definitions.get(entryId) ?? []
+    const jsonParsed = JSON.parse(entryRow.json)
+    const jishoPhrase: JishoAPIResult = jsonParsed["jisho"]
+    const maziiPhrase: MaziiWordSearchPayload = jsonParsed["mazii"]
 
-    const uniqueKanji = Array.from(new Set(kanjiTerms))
-    const uniqueReadings = Array.from(new Set(readingTerms))
-    const writings = uniqueKanji.length > 0 ? uniqueKanji : uniqueReadings
-
-    if (writings.length === 0) return
-
-    if (uniqueReadings.length === 0) {
-        for (const writing of writings) {
-            await dictionary.addTerm(
-                new TermEntry(writing)
-                    .addDetailedDefinitions(definitionList)
-                    .build())
-        }
-    } else {
-        for (const writing of writings) {
-            for (const reading of uniqueReadings) {
-                await dictionary.addTerm(
-                    new TermEntry(writing)
-                        .setReading(reading)
-                        .addDetailedDefinitions(definitionList)
-                        .build())
-            }
-        }
-    }
-
-    const kanjis = uniqueKanji.filter(k => kanjiPattern.test(k))
-    for (var kanji in kanjis) {
-        await dictionary.addKanji(
-            new KanjiEntry(kanji)
-                .addMeanings(definitionList.map(d => d.toString()))
-                .build())
-    }
+    const termEntry = new TermEntry("")
+    insertMaziiPhrase(termEntry, maziiPhrase)
+    insertJishoPhrase(termEntry, jishoPhrase)
+    dictionary.addTerm(termEntry.build())
 }
 
+function insertMaziiKanji(kanjiEntry: KanjiEntry, maziiKanjis: MaziiKanjiResult[]) {
+    if (!maziiKanjis) return
+    if (maziiKanjis.length == 0) return
+    const maziiKanji = maziiKanjis[0]
+    kanjiEntry.setKanji(maziiKanji?.kanji!)
+            .addMeaning(`HÁN VIỆT: ${maziiKanji?.mean}`)
+            .addMeaning(maziiKanji?.detail!)
+            .setKunyomi(maziiKanji?.kun?maziiKanji?.kun! : "")
+            .setOnyomi(maziiKanji?.on?maziiKanji?.on! : "")
+}
+
+function insertJishoKanji(kanjiEntry: KanjiEntry, jishoKanji: KanjiParseResult) {
+    if (!jishoKanji) return
+    if(!jishoKanji.found) return
+    kanjiEntry.setKanji(jishoKanji.query)
+            .setOnyomi(`${kanjiEntry.onyomi}, ${jishoKanji.onyomi.join(", ")}`)
+            .setKunyomi(`${kanjiEntry.kunyomi}, ${jishoKanji.kunyomi.join(", ")}`)
+}
+
+function insertKanji(
+    dictionary: Dictionary,
+    entryRow: typeof rawKanjiCrawlJson.$inferSelect
+) {    
+    const jsonParsed = JSON.parse(entryRow.json)
+    const jishoPhrase: KanjiParseResult = jsonParsed["jisho"]
+    const maziiPhrase: MaziiKanjiResult[] = jsonParsed["mazii"]
+
+    const kanjiEntry = new KanjiEntry("")
+    insertMaziiKanji(kanjiEntry, maziiPhrase)
+    insertJishoKanji(kanjiEntry, jishoPhrase)
+    if(kanjiEntry.kanji.length == 0) return
+    if(kanjiEntry.meanings.length == 0) return
+    dictionary.addKanji(kanjiEntry.build())
+}
 
 async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number, maxEntries: number = Number.POSITIVE_INFINITY) {
     var entryInsertedTotal = 0;
     const db = getDatabase()
-    const entryTotal = db
+    const phraseTotal = db
         .select({ value: sql<number>`count(*)` })
-        .from(entry)
-        .get()?.value;
+        .from(rawWordCrawlJson)
+        .get()?.value!;
+    const kanjiTotal = db
+        .select({ value: sql<number>`count(*)` })
+        .from(rawKanjiCrawlJson)
+        .get()?.value!;
+    const entryTotal = phraseTotal + kanjiTotal
 
+    // INPUT TERM
     let lastEntryId: number | null = -1;
-
     while (true) {
         const entries = db
             .select()
-            .from(entry)
-            .orderBy(entry.id)
-            .where(gt(entry.id, lastEntryId))
+            .from(rawWordCrawlJson)
+            .orderBy(rawWordCrawlJson.id)
+            .where(gt(rawWordCrawlJson.id, lastEntryId))
             .limit(chunkLimit)
             .all()
 
         if (entries.length === 0) break
-
         lastEntryId = entries[entries.length - 1]!.id
-
-        const entryIds = entries.map((row) => row.id)
-        const lookups = buildLookups(entryIds);
-
         for (const row of entries) {
-            if (entryInsertedTotal >= maxEntries) return
-            await insertEntry(dictionary, row, lookups);
-
+            insertPhrase(dictionary, row);
             entryInsertedTotal += 1
-            console.log(
-                `entry ${entryInsertedTotal}/${entryTotal}`,
-            )
+            console.log(`${entryInsertedTotal}/${entryTotal}`,)
+        }
+    }
+
+    //INPUT KANJI
+    lastEntryId = -1;
+    while (true) {
+        const entries = db
+            .select()
+            .from(rawKanjiCrawlJson)
+            .orderBy(rawKanjiCrawlJson.id)
+            .where(gt(rawKanjiCrawlJson.id, lastEntryId))
+            .limit(chunkLimit)
+            .all()
+
+        if (entries.length === 0) break
+        lastEntryId = entries[entries.length - 1]!.id
+        for (const row of entries) {
+            insertKanji(dictionary, row);
+            entryInsertedTotal += 1
+            console.log(`${entryInsertedTotal}/${entryTotal}`,)
         }
     }
 }
 
-export async function buildYomitan()
-{
+export async function buildYomitan() {
     const dictionary = new Dictionary({
         fileName: "./output/lulujv.zip"
     })
@@ -176,8 +151,8 @@ export async function buildYomitan()
         .setTitle("Lulu J-V Dictionary")
         .setAuthor("LULU")
         .setRevision("0.2")
-        .setDescription("A test dictionary for Yomitan dict")
-        .setAttribution('test')
+        .setDescription("A Japanese -> Vietnamese/English dictionary for Yomitan dict")
+        .setAttribution('Japanese,Vietnamese,English')
         .build()
     await dictionary.setIndex(index)
     const maxEntries = process.env.MAX_ENTRIES ? Number(process.env.MAX_ENTRIES) : Number.POSITIVE_INFINITY;
