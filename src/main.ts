@@ -3,7 +3,7 @@ import { exit } from 'node:process'
 import { createInterface } from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process'
 import { writeJmdictToDatabase } from './jmdict_process'
-import { crawlFromDatabase } from 'crawl'
+import { crawlWithRetryAsync } from 'crawl'
 import { buildYomitan } from 'build'
 import { 
   closeDatabase, 
@@ -88,7 +88,7 @@ const actions: Record<string, () => Promise<void>> = {
   jmdict: async () => { await jmdict() },
   resetall: async () => { await resetAll() },
   resetcrawl: async () => { resetCrawlTable() },
-  crawl: async () => { await crawlFromDatabase() },
+  crawl: async () => { await crawlWithRetryAsync() },
   yomitan: async () => { await buildYomitan() },
   parse: async () => { await writeJmdictToDatabase() },
 }

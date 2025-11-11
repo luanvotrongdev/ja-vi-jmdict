@@ -21,13 +21,15 @@ const {
 const jisho = new JishoAPI()
 const minMs: number = Number.parseInt(process.env.MIN_CRAWL_SLEEP!)
 const maxMs: number = Number.parseInt(process.env.MAX_CRAWL_SLEEP!)
+const minRetryMs: number = Number.parseInt(process.env.MIN_RETRY_SLEEP!)
+const maxRetryMs: number = Number.parseInt(process.env.MAX_RETRY_SLEEP!)
 
 let currentPhrase: string = ""
 let currentKanji: string = ""
-let totalEntry : number = 0
-let currentEntry : number = 0
-let totalSubEntry : number = 0
-let currentSubEntry : number = 0
+let totalEntry: number = 0
+let currentEntry: number = 0
+let totalSubEntry: number = 0
+let currentSubEntry: number = 0
 
 function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
@@ -36,6 +38,12 @@ function sleep(ms: number) {
 async function randomSleep() {
     const ms = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs
     console.log(`           ${ms} SLEEP`)
+    await sleep(ms)
+}
+
+async function randomSleepBeforeRetry() {
+    const ms = Math.floor(Math.random() * (maxRetryMs - minRetryMs + 1)) + minRetryMs
+    console.log(`           ${ms} SLEEP BEFORE RETRY`)
     await sleep(ms)
 }
 
@@ -48,13 +56,12 @@ function printProgress(prefix: string, ratio: number) {
     process.stdout.write(`\r${prefix} [${bar}] ${percent}%\n`)
 }
 
-function printOverallProcess()
-{
+function printOverallProcess() {
     process.stdout.write('\x1b[2J\x1b[H')
     console.log("")
     console.log(` QUERYING  ${currentKanji} in ${currentPhrase}`)
-    printProgress(`    ENTRY `, currentEntry/totalEntry)
-    printProgress(`   PHRASE `, currentSubEntry/totalSubEntry)
+    printProgress(`    ENTRY `, currentEntry / totalEntry)
+    printProgress(`   PHRASE `, currentSubEntry / totalSubEntry)
     console.log(`           ${currentSubEntry}/${totalSubEntry} phrases in ${currentEntry}/${totalEntry} entries`)
 }
 
@@ -138,20 +145,19 @@ async function crawl(entryId: number, phrase: string) {
     }
 }
 
-async function getLatestEntryId() : Promise<number>
-{
+async function getLatestEntryId(): Promise<number> {
     const db = getDatabase()
     const maxEntryId = db.select()
-                            .from(rawWordCrawlJson)
-                            .orderBy(desc(rawWordCrawlJson.entryId))
-                            .limit(1)
-                            .values()
-    return maxEntryId.length > 0 ? 
-                maxEntryId[0]![1] - 1 //decrease 1 because we want to rerun
-                : 0;
+        .from(rawWordCrawlJson)
+        .orderBy(desc(rawWordCrawlJson.entryId))
+        .limit(1)
+        .values()
+    return maxEntryId.length > 0 ?
+        maxEntryId[0]![1] - 1 //decrease 1 because we want to rerun
+        : 0;
 }
 
-export async function crawlFromDatabase() {
+async function crawlFromDatabase() {
     process.stdout.write('\x1b[2J\x1b[H')
     const db = getDatabase()
     let chunkLimit = 50
@@ -162,8 +168,8 @@ export async function crawlFromDatabase() {
 
     while (currentEntry != totalEntry) {
         currentEntry = await getLatestEntryId()
-        const kEntries : any = db
-            .select({text: kEle.keb, entryId: kEle.entryId})
+        const kEntries: any = db
+            .select({ text: kEle.keb, entryId: kEle.entryId })
             .from(kEle)
             .orderBy(kEle.entryId)
             .where(gt(kEle.entryId, currentEntry))
@@ -171,8 +177,8 @@ export async function crawlFromDatabase() {
             .all()
             .values()
             .toArray()
-        const rEntries : any =db
-            .select({text: rEle.reb, entryId: rEle.entryId})
+        const rEntries: any = db
+            .select({ text: rEle.reb, entryId: rEle.entryId })
             .from(rEle)
             .orderBy(rEle.entryId)
             .where(gt(rEle.entryId, currentEntry))
@@ -186,11 +192,22 @@ export async function crawlFromDatabase() {
         ]
         totalSubEntry = entries.length
         if (totalSubEntry === 0) continue
-        for (currentSubEntry =0;currentSubEntry <totalSubEntry;currentSubEntry++) {
+        for (currentSubEntry = 0; currentSubEntry < totalSubEntry; currentSubEntry++) {
             let row = entries[currentSubEntry]!
             await crawl(row.entryId, row.text)
         }
     }
 
     console.log("CRAWL DONE!")
+}
+
+export async function crawlWithRetryAsync() {
+    while (true) {
+        try {
+            await crawlFromDatabase()
+        }
+        catch (ex) {
+            await randomSleepBeforeRetry()
+        }
+    }
 }
