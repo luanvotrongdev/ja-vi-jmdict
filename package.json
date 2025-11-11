@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "main": "bun --env-file=.dev.env run src/main"
+    "main": "bun --env-file=.env run src/main",
+    "test_yomitan": "bun --env-file=.dev.env run src/main yomitan"
   },
   "devDependencies": {
     "@types/bun": "^1.3.1",
