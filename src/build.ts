@@ -1,11 +1,10 @@
 import 'dotenv/config'
 import { Dictionary, DictionaryIndex, KanjiEntry, TermEntry } from "yomichan-dict-builder";
 import * as schema from '../schemas'
-import { eq, gt, sql } from 'drizzle-orm';
-import type { DetailedDefinition } from 'yomichan-dict-builder/dist/types/yomitan/termbank';
+import { gt, sql } from 'drizzle-orm';
 import { getDatabase } from 'handler';
 import type { JishoAPIResult, JishoWordSense, KanjiParseResult } from 'unofficial-jisho-api';
-import type { MaziiKanjiResult, MaziiWordResult, MaziiWordSearchPayload } from '../schemas/api';
+import type { MaziiKanjiResult, MaziiWordSearchPayload } from '../schemas/api';
 
 const {
     rawKanjiCrawlJson,
@@ -21,7 +20,7 @@ function insertMaziiPhrase(termEntry: TermEntry, maziiPhrase: MaziiWordSearchPay
     maziiPhrase.words[0]!
         .means
         .forEach((mean: any) => {
-            termEntry.addDetailedDefinition(mean.mean!)
+            termEntry.addDetailedDefinition(`${mean.mean!}\n`)
         });
 }
 
@@ -31,8 +30,10 @@ function insertJishoPhrase(termEntry: TermEntry, jishoPhrase: JishoAPIResult) {
     if (jishoPhrase.data.length == 0) return
     const word = jishoPhrase.data[0]
     termEntry.setTerm(word?.slug!)
-    if (word?.japanese.length! > 0)
-        termEntry.setReading(word?.japanese[0]?.reading!)
+    if (word?.japanese.length! > 0) {
+        const reading = word?.japanese[0]?.reading
+        termEntry.setReading(reading ? reading : "");
+    }
     word?.senses
         .forEach((mean: JishoWordSense) => {
             termEntry.addDetailedDefinitions(mean.english_definitions.map(d => d))
@@ -58,24 +59,24 @@ function insertMaziiKanji(kanjiEntry: KanjiEntry, maziiKanjis: MaziiKanjiResult[
     if (maziiKanjis.length == 0) return
     const maziiKanji = maziiKanjis[0]
     kanjiEntry.setKanji(maziiKanji?.kanji!)
-            .addMeaning(`HÁN VIỆT: ${maziiKanji?.mean}`)
-            .addMeaning(maziiKanji?.detail!)
-            .setKunyomi(maziiKanji?.kun?maziiKanji?.kun! : "")
-            .setOnyomi(maziiKanji?.on?maziiKanji?.on! : "")
+        .addMeaning(`HÁN: ${maziiKanji?.mean}\n`)
+        .addMeaning(maziiKanji?.detail! + "\n")
+        .setKunyomi(maziiKanji?.kun ? maziiKanji?.kun! : "")
+        .setOnyomi(maziiKanji?.on ? maziiKanji?.on! : "")
 }
 
 function insertJishoKanji(kanjiEntry: KanjiEntry, jishoKanji: KanjiParseResult) {
     if (!jishoKanji) return
-    if(!jishoKanji.found) return
+    if (!jishoKanji.found) return
     kanjiEntry.setKanji(jishoKanji.query)
-            .setOnyomi(`${kanjiEntry.onyomi}, ${jishoKanji.onyomi.join(", ")}`)
-            .setKunyomi(`${kanjiEntry.kunyomi}, ${jishoKanji.kunyomi.join(", ")}`)
+        .setOnyomi(`${kanjiEntry.onyomi}, ${jishoKanji.onyomi.join(", ")}`)
+        .setKunyomi(`${kanjiEntry.kunyomi}, ${jishoKanji.kunyomi.join(", ")}`)
 }
 
 function insertKanji(
     dictionary: Dictionary,
     entryRow: typeof rawKanjiCrawlJson.$inferSelect
-) {    
+) {
     const jsonParsed = JSON.parse(entryRow.json)
     const jishoPhrase: KanjiParseResult = jsonParsed["jisho"]
     const maziiPhrase: MaziiKanjiResult[] = jsonParsed["mazii"]
@@ -83,12 +84,12 @@ function insertKanji(
     const kanjiEntry = new KanjiEntry("")
     insertMaziiKanji(kanjiEntry, maziiPhrase)
     insertJishoKanji(kanjiEntry, jishoPhrase)
-    if(kanjiEntry.kanji.length == 0) return
-    if(kanjiEntry.meanings.length == 0) return
+    if (kanjiEntry.kanji.length == 0) return
+    if (kanjiEntry.meanings.length == 0) return
     dictionary.addKanji(kanjiEntry.build())
 }
 
-async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number, maxEntries: number = Number.POSITIVE_INFINITY) {
+async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number) {
     var entryInsertedTotal = 0;
     const db = getDatabase()
     const phraseTotal = db
@@ -119,6 +120,7 @@ async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number,
             entryInsertedTotal += 1
             console.log(`${entryInsertedTotal}/${entryTotal}`,)
         }
+        await dictionary.export()
     }
 
     //INPUT KANJI
@@ -139,6 +141,7 @@ async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number,
             entryInsertedTotal += 1
             console.log(`${entryInsertedTotal}/${entryTotal}`,)
         }
+        await dictionary.export()
     }
 }
 
@@ -155,7 +158,5 @@ export async function buildYomitan() {
         .setAttribution('Japanese,Vietnamese,English')
         .build()
     await dictionary.setIndex(index)
-    const maxEntries = process.env.MAX_ENTRIES ? Number(process.env.MAX_ENTRIES) : Number.POSITIVE_INFINITY;
-    await queryPaginatedEntries(dictionary, 200, maxEntries)
-    await dictionary.export()
+    await queryPaginatedEntries(dictionary, 2000)
 }
