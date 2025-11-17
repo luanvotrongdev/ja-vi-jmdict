@@ -11,6 +11,7 @@ import {
   resetAll, 
   resetCrawlTable, 
   resolveDatabasePath } from 'handler'
+import { buildDictfile } from 'dictfile'
 
 type YesNoDefault = true | false
 
@@ -91,6 +92,7 @@ const actions: Record<string, () => Promise<void>> = {
   crawl: async () => { await crawlWithRetryAsync() },
   yomitan: async () => { await buildYomitan() },
   parse: async () => { await writeJmdictToDatabase() },
+  dictfile: async()=> { await buildDictfile() }
 }
 
 const command = process.argv[2]
@@ -103,6 +105,7 @@ if (!action) {
   console.error('       resetcrawl    - reset jisho/mazii crawl table')
   console.error('       crawl         - start jisho/mazii crawl')
   console.error('       yomitan       - start yomitan export')
+  console.error('       dictfile      - start dictfile export')
   process.exit(1)
 }
 
