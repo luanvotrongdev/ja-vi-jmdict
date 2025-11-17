@@ -4,7 +4,7 @@ import { createInterface } from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process'
 import { writeJmdictToDatabase } from './jmdict_process'
 import { crawlWithRetryAsync } from 'crawl'
-import { buildYomitan } from 'build'
+import { buildYomitan } from 'yomitan'
 import { 
   closeDatabase, 
   runCommand, 

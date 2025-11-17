@@ -5,6 +5,7 @@ import { gt, sql } from 'drizzle-orm';
 import { getDatabase } from 'handler';
 import type { JishoAPIResult, JishoWordSense, KanjiParseResult } from 'unofficial-jisho-api';
 import type { MaziiKanjiResult, MaziiWordSearchPayload } from '../schemas/api';
+import { existsSync, mkdirSync } from 'node:fs';
 
 const {
     rawKanjiCrawlJson,
@@ -146,8 +147,12 @@ async function queryPaginatedEntries(dictionary: Dictionary, chunkLimit: number)
 }
 
 export async function buildYomitan() {
+    const outputDir = "./output"
+    if (!existsSync(outputDir)) {
+        mkdirSync(outputDir, { recursive: true })
+    }
     const dictionary = new Dictionary({
-        fileName: "./output/lulujv.zip"
+        fileName: `${outputDir}/lulujv.zip`
     })
 
     const index = new DictionaryIndex()

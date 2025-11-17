@@ -1,5 +1,9 @@
 {
   "name": "ja-vi-jmdict",
+  "version": "1.0.0",
+  "description": "Open-source dictionary utility using JMdict, Mazii.net, and Jisho.org data.",
+  "author": "VO TRONG LUAN",
+  "license": "MIT",
   "module": "index.ts",
   "type": "module",
   "private": true,
