@@ -23,7 +23,20 @@
             "name": "Debug build Script",
             "runtimeArgs": [
                 "run",
+                "main",
                 "test_yomitan"
+            ],
+            "cwd": "${workspaceFolder}",
+            "internalConsoleOptions": "neverOpen"
+        },
+        {
+            "type": "bun",
+            "request": "launch",
+            "name": "Debug jmdict Script",
+            "runtimeArgs": [
+                "run",
+                "main",
+                "dictfile"
             ],
             "cwd": "${workspaceFolder}",
             "internalConsoleOptions": "neverOpen"

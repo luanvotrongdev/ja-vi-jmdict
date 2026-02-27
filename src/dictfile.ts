@@ -55,10 +55,12 @@ function insertJishoPhrase(infos: DefinitionInfos, jishoPhrase: JishoAPIResult) 
 
 function writePhrasesDefinitionInfos(ws: WriteStream, infos: DefinitionInfos, enIndex: number) {
     const setValues = [...infos.entry]
-    ws.write(`@ ${setValues[enIndex]}\n`)
-    setValues.forEach(en => {
-        ws.write(`& ${en}\n`)
-    })
+    const mainEntry = setValues[enIndex]
+    ws.write(`@ ${mainEntry}\n`)
+    setValues.filter(en => en != mainEntry)
+        .forEach(en => {
+            ws.write(`& ${en}\n`)
+        })
     infos.explanation.forEach(explanation => {
         ws.write(`- ${explanation}\n`)
     })
@@ -87,7 +89,7 @@ function insertMaziiKanji(infos: DefinitionInfos, maziiKanjis: MaziiKanjiResult[
     const maziiKanji = maziiKanjis[0]
     if (!maziiKanji) return
     infos.entry.add(maziiKanji.kanji)
-    infos.vn_cn.push(`Hán: ${maziiKanji?.mean}`)
+    infos.vn_cn.push(`${maziiKanji?.mean}`)
 }
 
 function insertJishoKanji(infos: DefinitionInfos, jishoKanji: KanjiParseResult) {
@@ -101,10 +103,12 @@ function insertJishoKanji(infos: DefinitionInfos, jishoKanji: KanjiParseResult) 
 
 function writeDefinitionInfos(ws: WriteStream, infos: DefinitionInfos, enIndex: number) {
     const setValues = [...infos.entry]
-    ws.write(`@ ${setValues[enIndex]}\n`)
-    setValues.forEach(en => {
-        ws.write(`& ${en}\n`)
-    })
+    const mainEntry = setValues[enIndex]
+    ws.write(`@ ${mainEntry}\n`)
+    setValues.filter(en => en != mainEntry)
+        .forEach(en => {
+            ws.write(`& ${en}\n`)
+        })
     ws.write(`- <${infos.vn_cn[enIndex]}>\n`)
     ws.write(`- [${infos.kun.join(", ")}]\n`)
     ws.write(`- (${infos.on.join(", ")})\n`)
@@ -156,7 +160,8 @@ async function queryPaginatedEntries(ws: WriteStream, chunkLimit: number) {
         for (const row of entries) {
             insertPhrase(ws, row);
             entryInsertedTotal += 1
-            console.log(`${entryInsertedTotal}/${entryTotal}`,)
+            console.log(`${entryInsertedTotal}/${entryTotal}`)
+
         }
     }
 
