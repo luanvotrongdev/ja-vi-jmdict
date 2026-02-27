@@ -12,33 +12,56 @@ const {
     rawWordCrawlJson
 } = schema
 
-function insertMaziiPhrase(ws: WriteStream, maziiPhrase: MaziiWordSearchPayload) {
+class DefinitionInfos {
+    public entry: Set<string> = new Set();
+    public kun: string[] = [];
+    public on: string[] = [];
+    public vn_cn: string[] = [];
+    public explanation: string[] = [];
+}
+
+function insertMaziiPhrase(infos: DefinitionInfos, maziiPhrase: MaziiWordSearchPayload) {
     if (!maziiPhrase.words) return
     if (maziiPhrase.words.length == 0) return
     const word = maziiPhrase.words[0]
     if (!word) return
-    ws.write(`@${maziiPhrase.words[0]!.word}\n`)
+    infos.entry.add(maziiPhrase.words[0]!.word)
     maziiPhrase.words[0]!
         .means
         .forEach((mean: any) => {
-            ws.write(`- ${mean.mean!}\n`)
+            infos.explanation.push(mean.mean!)
         });
 }
 
-function insertJishoPhrase(ws: WriteStream, jishoPhrase: JishoAPIResult) {
+function insertJishoPhrase(infos: DefinitionInfos, jishoPhrase: JishoAPIResult) {
     if (jishoPhrase.meta.status != 200) return
     if (!jishoPhrase.data) return
     if (jishoPhrase.data.length == 0) return
     const word = jishoPhrase.data[0]
-    ws.write(`@${word?.slug!}\n`)
+    infos.entry.add(word?.slug!)
     if (word?.japanese.length! > 0) {
         const reading = word?.japanese[0]?.reading
-        ws.write(`- ${reading ? reading : ""}\n`)
+        if (reading) {
+            infos.explanation.push(reading)
+        }
     }
-    word?.senses
-        .forEach((mean: JishoWordSense) => {
-            mean.english_definitions.map(d => ws.write(`- ${d ? d : ""}\n`))
-        });
+    if (!word) return
+
+    var means: string[] = word.senses
+        .flatMap((mean: JishoWordSense) => mean.english_definitions)
+        .filter((mean: string) => mean != null && mean != 'undefined')
+    infos.explanation.push(...means)
+}
+
+function writePhrasesDefinitionInfos(ws: WriteStream, infos: DefinitionInfos, enIndex: number) {
+    const setValues = [...infos.entry]
+    ws.write(`@ ${setValues[enIndex]}\n`)
+    setValues.forEach(en => {
+        ws.write(`& ${en}\n`)
+    })
+    infos.explanation.forEach(explanation => {
+        ws.write(`- ${explanation}\n`)
+    })
 }
 
 function insertPhrase(
@@ -49,26 +72,42 @@ function insertPhrase(
     const jishoPhrase: JishoAPIResult = jsonParsed["jisho"]
     const maziiPhrase: MaziiWordSearchPayload = jsonParsed["mazii"]
 
-    insertMaziiPhrase(ws, maziiPhrase)
-    insertJishoPhrase(ws, jishoPhrase)
+    const dictInfo = new DefinitionInfos()
+    insertMaziiPhrase(dictInfo, maziiPhrase)
+    insertJishoPhrase(dictInfo, jishoPhrase)
+    const setValues = [...dictInfo.entry]
+    for (var i = 0; i < setValues.length; i++) {
+        writePhrasesDefinitionInfos(ws, dictInfo, i)
+    }
 }
 
-function insertMaziiKanji(ws: WriteStream, maziiKanjis: MaziiKanjiResult[]) {
+function insertMaziiKanji(infos: DefinitionInfos, maziiKanjis: MaziiKanjiResult[],) {
     if (!maziiKanjis) return
     if (maziiKanjis.length == 0) return
     const maziiKanji = maziiKanjis[0]
-    ws.write(`@${maziiKanji?.kanji!}\n`)
-    ws.write(`- Hán: ${maziiKanji?.mean}\n`)
-    ws.write(`- [${maziiKanji?.kun ? maziiKanji?.kun! : ""}]\n`)
-    ws.write(`- (${maziiKanji?.on ? maziiKanji?.on! : ""})\n`)
+    if (!maziiKanji) return
+    infos.entry.add(maziiKanji.kanji)
+    infos.vn_cn.push(`Hán: ${maziiKanji?.mean}`)
 }
 
-function insertJishoKanji(ws: WriteStream, jishoKanji: KanjiParseResult) {
+function insertJishoKanji(infos: DefinitionInfos, jishoKanji: KanjiParseResult) {
     if (!jishoKanji) return
     if (!jishoKanji.found) return
-    ws.write(`@${jishoKanji.query}\n`)
-    ws.write(`- [${jishoKanji.kunyomi.join(", ")}]\n`)
-    ws.write(`- (${jishoKanji.onyomi.join(", ")})\n`)
+    infos.entry.add(jishoKanji.query)
+    infos.kun.push(...jishoKanji.kunyomi)
+    infos.on.push(...jishoKanji.onyomi)
+    infos.explanation.push(jishoKanji.meaning)
+}
+
+function writeDefinitionInfos(ws: WriteStream, infos: DefinitionInfos, enIndex: number) {
+    const setValues = [...infos.entry]
+    ws.write(`@ ${setValues[enIndex]}\n`)
+    setValues.forEach(en => {
+        ws.write(`& ${en}\n`)
+    })
+    ws.write(`- <${infos.vn_cn[enIndex]}>\n`)
+    ws.write(`- [${infos.kun.join(", ")}]\n`)
+    ws.write(`- (${infos.on.join(", ")})\n`)
 }
 
 function insertKanji(
@@ -79,8 +118,13 @@ function insertKanji(
     const jishoPhrase: KanjiParseResult = jsonParsed["jisho"]
     const maziiPhrase: MaziiKanjiResult[] = jsonParsed["mazii"]
 
-    insertMaziiKanji(ws, maziiPhrase)
-    insertJishoKanji(ws, jishoPhrase)
+    const dictInfo = new DefinitionInfos()
+    insertJishoKanji(dictInfo, jishoPhrase)
+    insertMaziiKanji(dictInfo, maziiPhrase)
+    const setValues = [...dictInfo.entry]
+    for (var i = 0; i < setValues.length; i++) {
+        writeDefinitionInfos(ws, dictInfo, i)
+    }
 }
 
 async function queryPaginatedEntries(ws: WriteStream, chunkLimit: number) {
@@ -142,6 +186,6 @@ export async function buildDictfile() {
     if (!existsSync(outputDir)) {
         mkdirSync(outputDir, { recursive: true })
     }
-    const writeStream = createWriteStream(`${outputDir}/lulujv.df`, { flags: "a" })
+    const writeStream = createWriteStream(`${outputDir}/japanese-english.df`, { flags: "a" })
     await queryPaginatedEntries(writeStream, 2000)
 }
