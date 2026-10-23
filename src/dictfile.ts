@@ -1,60 +1,27 @@
+// Writes the crawled dictionary as a dictgen dictfile (.df) with raw HTML
+// entries, ready for `kobo` to turn into a Kobo dictzip.
+// Dictfile format: https://pgaskin.net/dictutil/dictgen/
 import 'dotenv/config'
-import { createWriteStream, WriteStream } from "node:fs";
+import { createWriteStream, WriteStream } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
+import { asc, gt, inArray, sql } from 'drizzle-orm'
 import * as schema from '../schemas'
-import { gt, sql } from 'drizzle-orm';
-import { getDatabase } from 'handler';
-import type { JishoAPIResult, JishoWordSense, KanjiParseResult } from 'unofficial-jisho-api';
-import type { MaziiKanjiResult, MaziiWordSearchPayload } from '../schemas/api';
-import { existsSync, mkdirSync } from 'node:fs';
-import { hiraganaToKatakana, isAllKana } from 'kobo';
+import { getDatabase } from 'handler'
+import { hiraganaToKatakana, isAllKana } from 'kobo'
+import {
+    buildKanjiEntry,
+    buildWordEntry,
+    type KanjiEntry,
+    type WordEntry,
+    type WordForms,
+} from 'entries'
 
 const {
+    kEle,
+    rEle,
     rawKanjiCrawlJson,
-    rawWordCrawlJson
+    rawWordCrawlJson,
 } = schema
-
-class DefinitionInfos {
-    public entry: Set<string> = new Set();
-    public kun: string[] = [];
-    public on: string[] = [];
-    public vn_cn: string[] = [];
-    public explanation: string[] = [];
-}
-
-function insertMaziiPhrase(infos: DefinitionInfos, maziiPhrase: MaziiWordSearchPayload) {
-    if (!maziiPhrase.words) return
-    if (maziiPhrase.words.length == 0) return
-    const word = maziiPhrase.words[0]
-    if (!word) return
-    infos.entry.add(maziiPhrase.words[0]!.word)
-    maziiPhrase.words[0]!
-        .means
-        .forEach((mean: any) => {
-            infos.explanation.push(mean.mean!)
-        });
-}
-
-function insertJishoPhrase(infos: DefinitionInfos, jishoPhrase: JishoAPIResult) {
-    if (jishoPhrase.meta.status != 200) return
-    if (!jishoPhrase.data) return
-    if (jishoPhrase.data.length == 0) return
-    const word = jishoPhrase.data[0]
-    infos.entry.add(word?.slug!)
-    if (word?.japanese.length! > 0) {
-        const reading = word?.japanese[0]?.reading
-        if (reading) {
-            infos.explanation.push(reading)
-            // Also a lookup key, so words printed in kana are found.
-            infos.entry.add(reading)
-        }
-    }
-    if (!word) return
-
-    var means: string[] = word.senses
-        .flatMap((mean: JishoWordSense) => mean.english_definitions)
-        .filter((mean: string) => mean != null && mean != 'undefined')
-    infos.explanation.push(...means)
-}
 
 // Kobo's fonts draw Vietnamese tone marks badly when they are separate
 // combining characters (NFD), so compose them (NFC). Also drop invisible
@@ -71,148 +38,205 @@ function writeLine(ws: WriteStream, text: string) {
     ws.write(`${cleanText(text)}\n`)
 }
 
-// Writes the headword line and one `&` variant line per other form. All-kana
-// forms also get a katakana variant: Kobo looks hiragana words up in katakana.
-function writeHeadwords(ws: WriteStream, entries: Set<string>) {
-    const [mainEntry, ...others] = [...entries]
+function esc(text: string): string {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+}
+
+// Kobo shows dictionary text in its built-in Georgia, which lacks most
+// Vietnamese letters (ư ơ ạ ả ấ ự …). Kobo Nickel has them; a sideloaded
+// font can be added in front. Japanese still falls back to Kobo's CJK font.
+const FONT_STACK = `'Kobo Nickel', 'Noto Serif', Georgia, serif`
+const fontStyle = `font-family: ${FONT_STACK}`
+
+const gray = (html: string) => `<font color="gray">${html}</font>`
+const small = (html: string) => `<small>${html}</small>`
+
+// Writes one raw-HTML dictfile entry. `::` turns off dictgen's own header
+// (we render our own). All-kana keys also get a katakana variant, because
+// Kobo looks hiragana words up in katakana.
+function writeEntry(ws: WriteStream, keys: string[], html: string) {
+    const [headword, ...others] = keys
+    if (!headword) return
     const variants = new Set(others)
-    for (const en of entries) {
-        if (isAllKana(en)) variants.add(hiraganaToKatakana(en))
+    for (const key of keys) {
+        if (isAllKana(key)) variants.add(hiraganaToKatakana(key))
     }
-    variants.delete(mainEntry!)
-    writeLine(ws, `@ ${mainEntry}`)
-    variants.forEach(en => {
-        writeLine(ws, `& ${en}`)
-    })
+    variants.delete(headword)
+    writeLine(ws, `@ ${headword}`)
+    writeLine(ws, '::')
+    variants.forEach(v => writeLine(ws, `& ${v}`))
+    writeLine(ws, '<html>')
+    writeLine(ws, html)
 }
 
-function writePhrasesDefinitionInfos(ws: WriteStream, infos: DefinitionInfos) {
-    writeHeadwords(ws, infos.entry)
-    infos.explanation.forEach(explanation => {
-        writeLine(ws, `- ${explanation}`)
-    })
-}
+function renderWord(e: WordEntry): string {
+    const parts: string[] = []
 
-function insertPhrase(
-    ws: WriteStream,
-    entryRow: typeof rawWordCrawlJson.$inferSelect,
-) {
-    const jsonParsed = JSON.parse(entryRow.json)
-    const jishoPhrase: JishoAPIResult = jsonParsed["jisho"]
-    const maziiPhrase: MaziiWordSearchPayload = jsonParsed["mazii"]
-
-    const dictInfo = new DefinitionInfos()
-    insertMaziiPhrase(dictInfo, maziiPhrase)
-    insertJishoPhrase(dictInfo, jishoPhrase)
-    if (dictInfo.entry.size > 0) {
-        writePhrasesDefinitionInfos(ws, dictInfo)
+    // 食べる 【たべる】 [2]  N5 · thông dụng
+    const tags = [e.jlpt, e.common ? 'thông dụng' : null].filter(Boolean) as string[]
+    let header = `<b>${esc(e.headword)}</b>`
+    if (e.readings.length) header += ` 【${esc(e.readings.slice(0, 3).join('・'))}】`
+    if (e.pitchAccent !== null) header += ` ${gray(`[${e.pitchAccent}]`)}`
+    if (tags.length) header += ` ${small(gray(esc(tags.join(' · '))))}`
+    parts.push(`<p>${header}</p>`)
+    if (e.otherWritings.length) {
+        parts.push(`<p>${small(gray(`Cách viết khác: ${esc(e.otherWritings.join('、'))}`))}</p>`)
     }
-}
 
-function insertMaziiKanji(infos: DefinitionInfos, maziiKanjis: MaziiKanjiResult[],) {
-    if (!maziiKanjis) return
-    if (maziiKanjis.length == 0) return
-    const maziiKanji = maziiKanjis[0]
-    if (!maziiKanji) return
-    infos.entry.add(maziiKanji.kanji)
-    infos.vn_cn.push(`${maziiKanji?.mean}`)
-}
-
-function insertJishoKanji(infos: DefinitionInfos, jishoKanji: KanjiParseResult) {
-    if (!jishoKanji) return
-    if (!jishoKanji.found) return
-    infos.entry.add(jishoKanji.query)
-    infos.kun.push(...jishoKanji.kunyomi)
-    infos.on.push(...jishoKanji.onyomi)
-    infos.explanation.push(jishoKanji.meaning)
-}
-
-function writeDefinitionInfos(ws: WriteStream, infos: DefinitionInfos) {
-    writeHeadwords(ws, infos.entry)
-    // Full-width brackets: dictgen's Markdown would read "<A, Á>" as an HTML tag and hide it.
-    writeLine(ws, `- ＜${infos.vn_cn.join(", ")}＞`)
-    writeLine(ws, `- [${infos.kun.join(", ")}]`)
-    writeLine(ws, `- (${infos.on.join(", ")})`)
-}
-
-function insertKanji(
-    ws: WriteStream,
-    entryRow: typeof rawKanjiCrawlJson.$inferSelect
-) {
-    const jsonParsed = JSON.parse(entryRow.json)
-    const jishoPhrase: KanjiParseResult = jsonParsed["jisho"]
-    const maziiPhrase: MaziiKanjiResult[] = jsonParsed["mazii"]
-
-    const dictInfo = new DefinitionInfos()
-    insertJishoKanji(dictInfo, jishoPhrase)
-    insertMaziiKanji(dictInfo, maziiPhrase)
-    if (dictInfo.entry.size > 0) {
-        writeDefinitionInfos(ws, dictInfo)
+    if (e.vietnamese.length) {
+        if (e.wordTypes.length) {
+            parts.push(`<p><i>${esc(capitalize(e.wordTypes.join(' · ')))}</i></p>`)
+        }
+        const items = e.vietnamese.map(sense => {
+            const examples = sense.examples
+                .map(ex => `<br/>${small(`${esc(ex.japanese)}<br/><i>${esc(ex.vietnamese)}</i>`)}`)
+                .join('')
+            return `<li>${esc(sense.meaning)}${examples}</li>`
+        })
+        parts.push(`<ol>${items.join('')}</ol>`)
     }
+
+    if (e.english.length) {
+        parts.push(`<p>${gray('English')}</p>`)
+        let previousPos = ''
+        const items = e.english.map(sense => {
+            const pos = sense.partsOfSpeech.join(', ')
+            const posHtml = pos && pos !== previousPos ? `${small(gray(`<i>${esc(pos)}</i>`))}<br/>` : ''
+            previousPos = pos
+            const notes = sense.notes.length ? ` ${small(gray(`(${esc(sense.notes.join('; '))})`))}` : ''
+            return `<li>${posHtml}${esc(sense.definitions.join('; '))}${notes}</li>`
+        })
+        parts.push(`<ol>${items.join('')}</ol>`)
+    }
+
+    // kobo.ts lists common words first when several entries share a key.
+    return `<div class="word${e.common ? ' common' : ''}" style="${fontStyle}">${parts.join('')}</div>`
 }
 
-async function queryPaginatedEntries(ws: WriteStream, chunkLimit: number) {
-    var entryInsertedTotal = 0;
+function renderKanji(e: KanjiEntry): string {
+    const parts: string[] = []
+
+    // 食  THỰC, TỰ  N5 · 9 nét
+    const tags = [e.jlpt, e.strokes ? `${e.strokes} nét` : null].filter(Boolean) as string[]
+    let header = `<span style="font-size:1.8em"><b>${esc(e.kanji)}</b></span>`
+    if (e.hanViet) header += ` <b>${esc(e.hanViet)}</b>`
+    if (tags.length) header += ` ${small(gray(esc(tags.join(' · '))))}`
+    parts.push(`<p>${header}</p>`)
+
+    // Mazii separates paragraphs with "##".
+    if (e.vietnamese) {
+        const paragraphs = e.vietnamese.split('##').map(s => s.trim()).filter(s => s.length > 0)
+        parts.push(`<p>${paragraphs.map(esc).join('<br/>')}</p>`)
+    }
+    if (e.english) parts.push(`<p>${gray('English:')} ${esc(e.english)}</p>`)
+
+    const rows: string[] = []
+    const row = (label: string, value: string) => rows.push(`${gray(`${label}:`)} ${value}`)
+    if (e.onyomi.length) row('Âm On', esc(e.onyomi.join('、')))
+    if (e.kunyomi.length) row('Âm Kun', esc(e.kunyomi.join('、')))
+    if (e.radical) row('Bộ', esc(e.radical))
+    if (e.components.length) {
+        row('Thành phần', esc(e.components.map(c => c.hanViet ? `${c.kanji} ${c.hanViet}` : c.kanji).join(' · ')))
+    }
+    if (e.tip) row('Mẹo nhớ', esc(e.tip))
+    if (rows.length) parts.push(`<p>${rows.join('<br/>')}</p>`)
+
+    if (e.examples.length) {
+        const examples = e.examples.map(ex => {
+            const reading = ex.reading ? ` (${esc(ex.reading)})` : ''
+            const hanViet = ex.hanViet ? ` ${small(gray(esc(ex.hanViet)))}` : ''
+            return `${esc(ex.word)}${reading}${hanViet}: ${esc(ex.meaning)}`
+        })
+        parts.push(`<p>${gray('Ví dụ:')}<br/>${examples.join('<br/>')}</p>`)
+    }
+
+    // kobo.ts uses class="kanji" to list kanji entries after word entries.
+    return `<div class="kanji" style="${fontStyle}">${parts.join('')}</div>`
+}
+
+function capitalize(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+// JMdict kanji/readings for each entry, in JMdict order.
+function loadForms(entryIds: number[]): Map<number, WordForms> {
     const db = getDatabase()
-    const phraseTotal = db
-        .select({ value: sql<number>`count(*)` })
-        .from(rawWordCrawlJson)
-        .get()?.value!;
-    const kanjiTotal = db
-        .select({ value: sql<number>`count(*)` })
-        .from(rawKanjiCrawlJson)
-        .get()?.value!;
-    const entryTotal = phraseTotal + kanjiTotal
+    const forms = new Map<number, WordForms>()
+    const get = (id: number) => {
+        let f = forms.get(id)
+        if (!f) forms.set(id, f = { kanji: [], readings: [] })
+        return f
+    }
+    db.select({ entryId: kEle.entryId, text: kEle.keb }).from(kEle)
+        .where(inArray(kEle.entryId, entryIds)).orderBy(asc(kEle.entryId), asc(kEle.position)).all()
+        .forEach(r => get(r.entryId).kanji.push(r.text))
+    db.select({ entryId: rEle.entryId, text: rEle.reb }).from(rEle)
+        .where(inArray(rEle.entryId, entryIds)).orderBy(asc(rEle.entryId), asc(rEle.position)).all()
+        .forEach(r => get(r.entryId).readings.push(r.text))
+    return forms
+}
 
-    // INPUT TERM
-    let lastEntryId: number | null = -1;
+async function writeAllEntries(ws: WriteStream, chunkLimit: number) {
+    const db = getDatabase()
+    const count = (table: typeof rawWordCrawlJson | typeof rawKanjiCrawlJson) =>
+        db.select({ value: sql<number>`count(*)` }).from(table).get()?.value ?? 0
+    const total = count(rawWordCrawlJson) + count(rawKanjiCrawlJson)
+    let done = 0
+    let written = 0
+    const progress = () => {
+        if (done % 10000 === 0 || done === total) console.log(`${done}/${total} (${written} written)`)
+    }
+
+    // Words
+    let lastId = -1
     while (true) {
-        const entries = db
-            .select()
-            .from(rawWordCrawlJson)
-            .orderBy(rawWordCrawlJson.id)
-            .where(gt(rawWordCrawlJson.id, lastEntryId))
-            .limit(chunkLimit)
-            .all()
-
-        if (entries.length === 0) break
-        lastEntryId = entries[entries.length - 1]!.id
-        for (const row of entries) {
-            insertPhrase(ws, row);
-            entryInsertedTotal += 1
-            console.log(`${entryInsertedTotal}/${entryTotal}`)
-
+        const rows = db.select().from(rawWordCrawlJson)
+            .where(gt(rawWordCrawlJson.id, lastId)).orderBy(rawWordCrawlJson.id).limit(chunkLimit).all()
+        if (rows.length === 0) break
+        lastId = rows[rows.length - 1]!.id
+        const forms = loadForms(rows.map(r => r.entryId))
+        for (const row of rows) {
+            const f = forms.get(row.entryId)
+            const entry = f ? buildWordEntry(row.json, f) : null
+            if (entry) {
+                writeEntry(ws, entry.keys, renderWord(entry))
+                written++
+            }
+            done++
+            progress()
         }
     }
 
-    //INPUT KANJI
-    lastEntryId = -1;
+    // Kanji
+    lastId = -1
     while (true) {
-        const entries = db
-            .select()
-            .from(rawKanjiCrawlJson)
-            .orderBy(rawKanjiCrawlJson.id)
-            .where(gt(rawKanjiCrawlJson.id, lastEntryId))
-            .limit(chunkLimit)
-            .all()
-
-        if (entries.length === 0) break
-        lastEntryId = entries[entries.length - 1]!.id
-        for (const row of entries) {
-            insertKanji(ws, row);
-            entryInsertedTotal += 1
-            console.log(`${entryInsertedTotal}/${entryTotal}`,)
+        const rows = db.select().from(rawKanjiCrawlJson)
+            .where(gt(rawKanjiCrawlJson.id, lastId)).orderBy(rawKanjiCrawlJson.id).limit(chunkLimit).all()
+        if (rows.length === 0) break
+        lastId = rows[rows.length - 1]!.id
+        for (const row of rows) {
+            const entry = buildKanjiEntry(row.json)
+            if (entry) {
+                writeEntry(ws, [entry.kanji], renderKanji(entry))
+                written++
+            }
+            done++
+            progress()
         }
     }
 }
 
 export async function buildDictfile() {
-    const outputDir = "./output"
+    const outputDir = './output'
     if (!existsSync(outputDir)) {
         mkdirSync(outputDir, { recursive: true })
     }
-    const writeStream = createWriteStream(`${outputDir}/japanese-english.df`, { flags: "w" })
-    await queryPaginatedEntries(writeStream, 2000)
+    const writeStream = createWriteStream(`${outputDir}/japanese-english.df`, { flags: 'w' })
+    await writeAllEntries(writeStream, 2000)
     // Flush before `kobo` reads the file.
     await new Promise<void>((resolve, reject) => writeStream.end((err?: Error | null) => err ? reject(err) : resolve()))
 }

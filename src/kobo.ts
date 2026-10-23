@@ -79,6 +79,15 @@ function parseEntry(inner: string): { keys: string[], body: string } | null {
   return { keys, body }
 }
 
+// dictfile.ts wraps entries in <div class="word common" …>, <div class="word" …>
+// or <div class="kanji" …>. Array.sort is stable, so ties keep their order.
+function bodyRank(body: string): number {
+  const start = body.trimStart()
+  if (start.startsWith('<div class="word common"')) return 0
+  if (start.startsWith('<div class="kanji"')) return 2
+  return 1
+}
+
 export async function reshardForJapanese(inputZip: string, outputZip: string) {
   const source = await JSZip.loadAsync(await Bun.file(inputZip).arrayBuffer())
   const words = source.file('words')
@@ -118,8 +127,12 @@ export async function reshardForJapanese(inputZip: string, outputZip: string) {
   for (const [prefix, shard] of shards) {
     // Shorter keys first, so Kobo's fallback prefix match picks the closest word.
     const keys = [...shard.keys()].sort((a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0))
-    // Kobo often shows only one of several exact matches, so merge them into one entry.
-    const entries = keys.map(key => `<w><p><a name="${key}" />${shard.get(key)!.join('')}</p></w>`)
+    // Kobo often shows only one of several exact matches, so merge them into
+    // one entry: common words, then other words, then the kanji block.
+    const entries = keys.map(key => {
+      const bodies = [...shard.get(key)!].sort((a, b) => bodyRank(a) - bodyRank(b))
+      return `<w><a name="${key}" />${bodies.join('<hr/>')}</w>`
+    })
     const html = `<?xml version="1.0" encoding="utf-8"?><html>${entries.join('')}</html>`
     out.file(`${prefix}.html`, Bun.gzipSync(new TextEncoder().encode(html)))
   }
