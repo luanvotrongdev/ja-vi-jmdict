@@ -6,6 +6,7 @@ import { getDatabase } from 'handler';
 import type { JishoAPIResult, JishoWordSense, KanjiParseResult } from 'unofficial-jisho-api';
 import type { MaziiKanjiResult, MaziiWordSearchPayload } from '../schemas/api';
 import { existsSync, mkdirSync } from 'node:fs';
+import { hiraganaToKatakana, isAllKana } from 'kobo';
 
 const {
     rawKanjiCrawlJson,
@@ -43,6 +44,8 @@ function insertJishoPhrase(infos: DefinitionInfos, jishoPhrase: JishoAPIResult) 
         const reading = word?.japanese[0]?.reading
         if (reading) {
             infos.explanation.push(reading)
+            // Also a lookup key, so words printed in kana are found.
+            infos.entry.add(reading)
         }
     }
     if (!word) return
@@ -53,16 +56,40 @@ function insertJishoPhrase(infos: DefinitionInfos, jishoPhrase: JishoAPIResult) 
     infos.explanation.push(...means)
 }
 
-function writePhrasesDefinitionInfos(ws: WriteStream, infos: DefinitionInfos, enIndex: number) {
-    const setValues = [...infos.entry]
-    const mainEntry = setValues[enIndex]
-    ws.write(`@ ${mainEntry}\n`)
-    setValues.filter(en => en != mainEntry)
-        .forEach(en => {
-            ws.write(`& ${en}\n`)
-        })
+// Kobo's fonts draw Vietnamese tone marks badly when they are separate
+// combining characters (NFD), so compose them (NFC). Also drop invisible
+// characters and keep each value on one dictfile line.
+function cleanText(text: string): string {
+    return text
+        .normalize('NFC')
+        .replace(/[​﻿­\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '')
+        .replace(/\s*[\r\n\t]+\s*/g, ' ')
+        .trim()
+}
+
+function writeLine(ws: WriteStream, text: string) {
+    ws.write(`${cleanText(text)}\n`)
+}
+
+// Writes the headword line and one `&` variant line per other form. All-kana
+// forms also get a katakana variant: Kobo looks hiragana words up in katakana.
+function writeHeadwords(ws: WriteStream, entries: Set<string>) {
+    const [mainEntry, ...others] = [...entries]
+    const variants = new Set(others)
+    for (const en of entries) {
+        if (isAllKana(en)) variants.add(hiraganaToKatakana(en))
+    }
+    variants.delete(mainEntry!)
+    writeLine(ws, `@ ${mainEntry}`)
+    variants.forEach(en => {
+        writeLine(ws, `& ${en}`)
+    })
+}
+
+function writePhrasesDefinitionInfos(ws: WriteStream, infos: DefinitionInfos) {
+    writeHeadwords(ws, infos.entry)
     infos.explanation.forEach(explanation => {
-        ws.write(`- ${explanation}\n`)
+        writeLine(ws, `- ${explanation}`)
     })
 }
 
@@ -77,9 +104,8 @@ function insertPhrase(
     const dictInfo = new DefinitionInfos()
     insertMaziiPhrase(dictInfo, maziiPhrase)
     insertJishoPhrase(dictInfo, jishoPhrase)
-    const setValues = [...dictInfo.entry]
-    for (var i = 0; i < setValues.length; i++) {
-        writePhrasesDefinitionInfos(ws, dictInfo, i)
+    if (dictInfo.entry.size > 0) {
+        writePhrasesDefinitionInfos(ws, dictInfo)
     }
 }
 
@@ -101,17 +127,12 @@ function insertJishoKanji(infos: DefinitionInfos, jishoKanji: KanjiParseResult) 
     infos.explanation.push(jishoKanji.meaning)
 }
 
-function writeDefinitionInfos(ws: WriteStream, infos: DefinitionInfos, enIndex: number) {
-    const setValues = [...infos.entry]
-    const mainEntry = setValues[enIndex]
-    ws.write(`@ ${mainEntry}\n`)
-    setValues.filter(en => en != mainEntry)
-        .forEach(en => {
-            ws.write(`& ${en}\n`)
-        })
-    ws.write(`- <${infos.vn_cn[enIndex]}>\n`)
-    ws.write(`- [${infos.kun.join(", ")}]\n`)
-    ws.write(`- (${infos.on.join(", ")})\n`)
+function writeDefinitionInfos(ws: WriteStream, infos: DefinitionInfos) {
+    writeHeadwords(ws, infos.entry)
+    // Full-width brackets: dictgen's Markdown would read "<A, Á>" as an HTML tag and hide it.
+    writeLine(ws, `- ＜${infos.vn_cn.join(", ")}＞`)
+    writeLine(ws, `- [${infos.kun.join(", ")}]`)
+    writeLine(ws, `- (${infos.on.join(", ")})`)
 }
 
 function insertKanji(
@@ -125,9 +146,8 @@ function insertKanji(
     const dictInfo = new DefinitionInfos()
     insertJishoKanji(dictInfo, jishoPhrase)
     insertMaziiKanji(dictInfo, maziiPhrase)
-    const setValues = [...dictInfo.entry]
-    for (var i = 0; i < setValues.length; i++) {
-        writeDefinitionInfos(ws, dictInfo, i)
+    if (dictInfo.entry.size > 0) {
+        writeDefinitionInfos(ws, dictInfo)
     }
 }
 
@@ -191,6 +211,8 @@ export async function buildDictfile() {
     if (!existsSync(outputDir)) {
         mkdirSync(outputDir, { recursive: true })
     }
-    const writeStream = createWriteStream(`${outputDir}/japanese-english.df`, { flags: "a" })
+    const writeStream = createWriteStream(`${outputDir}/japanese-english.df`, { flags: "w" })
     await queryPaginatedEntries(writeStream, 2000)
+    // Flush before `kobo` reads the file.
+    await new Promise<void>((resolve, reject) => writeStream.end((err?: Error | null) => err ? reject(err) : resolve()))
 }
