@@ -3,10 +3,30 @@
 // (e.g. yomitan.ts) can reuse it.
 import type { JishoAPIResult, JishoResult, KanjiParseResult } from 'unofficial-jisho-api'
 import type { MaziiKanjiResult, MaziiWordResult, MaziiWordSearchPayload } from '../schemas/api'
+import { asc, inArray } from 'drizzle-orm'
+import * as schema from '../schemas'
+import { getDatabase } from 'handler'
 
 export interface WordForms {
+  sequence: number   // JMdict ent_seq
   kanji: string[]    // JMdict k_ele, in order
   readings: string[] // JMdict r_ele, in order
+}
+
+// JMdict sequence number, kanji spellings and readings for each entry id.
+export function loadWordForms(entryIds: number[]): Map<number, WordForms> {
+  const db = getDatabase()
+  const forms = new Map<number, WordForms>()
+  db.select({ id: schema.entry.id, seq: schema.entry.entSeq }).from(schema.entry)
+    .where(inArray(schema.entry.id, entryIds)).all()
+    .forEach(r => forms.set(r.id, { sequence: r.seq, kanji: [], readings: [] }))
+  db.select({ entryId: schema.kEle.entryId, text: schema.kEle.keb }).from(schema.kEle)
+    .where(inArray(schema.kEle.entryId, entryIds)).orderBy(asc(schema.kEle.entryId), asc(schema.kEle.position)).all()
+    .forEach(r => forms.get(r.entryId)?.kanji.push(r.text))
+  db.select({ entryId: schema.rEle.entryId, text: schema.rEle.reb }).from(schema.rEle)
+    .where(inArray(schema.rEle.entryId, entryIds)).orderBy(asc(schema.rEle.entryId), asc(schema.rEle.position)).all()
+    .forEach(r => forms.get(r.entryId)?.readings.push(r.text))
+  return forms
 }
 
 export interface Example {
@@ -26,13 +46,16 @@ export interface EnglishSense {
 }
 
 export interface WordEntry {
+  forms: WordForms
   headword: string
   otherWritings: string[]
   readings: string[]
   pitchAccent: number | null
+  pitchByReading: Map<string, number> // reading -> downstep, from Mazii
   jlpt: string | null
   common: boolean
   wordTypes: string[] // Vietnamese labels, from Mazii
+  kindCodes: string[] // raw JMdict codes from Mazii (v1, v5r, adj-i…)
   vietnamese: VietnameseSense[]
   english: EnglishSense[]
   keys: string[]      // every form a reader may look up
@@ -54,6 +77,8 @@ export interface KanjiEntry {
   kunyomi: string[]
   jlpt: string | null
   strokes: number | null
+  grade: string | null            // e.g. "grade 2", from Jisho
+  newspaperRank: number | null    // frequency rank in newspapers, from Jisho
   radical: string | null
   components: { kanji: string, hanViet: string }[]
   tip: string | null
@@ -98,6 +123,20 @@ function kindLabel(code: string): string | null {
 // Drops values with no letters or digits ("*", "_") and trims trailing whitespace.
 function meaningful(text: string | null | undefined): text is string {
   return typeof text === 'string' && /[\p{L}\p{N}]/u.test(text)
+}
+
+// Composes accents (NFC: some Mazii text has separate combining marks, which
+// many fonts draw badly) and removes invisible characters, in every string.
+function cleanStrings<T>(value: T): T {
+  if (typeof value === 'string') {
+    return value.normalize('NFC').replace(/[​﻿­]/g, '') as T
+  }
+  if (Array.isArray(value)) return value.map(cleanStrings) as T
+  if (value instanceof Map) return new Map([...value].map(([k, v]) => [cleanStrings(k), cleanStrings(v)])) as T
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, cleanStrings(v)])) as T
+  }
+  return value
 }
 
 // Trims and removes the stray space Mazii leaves before punctuation ("Mèo con .").
@@ -171,9 +210,11 @@ export function buildWordEntry(rawJson: string, forms: WordForms): WordEntry | n
   const mazii = isTopResult ? pickMaziiWord(json.mazii, headword, forms) : null
 
   const wordTypes = new Set<string>()
+  const kindCodes = new Set<string>()
   const vietnamese: VietnameseSense[] = []
   for (const mean of mazii?.means ?? []) {
     const kinds: string[] = Array.isArray(mean.kind) ? mean.kind : (mean.kind ?? '').split(',')
+    kinds.map(k => k.trim()).filter(k => k.length > 0).forEach(k => kindCodes.add(k))
     kinds.map(kindLabel).forEach(label => label && wordTypes.add(label))
     if (!meaningful(mean.mean)) continue
     vietnamese.push({
@@ -197,20 +238,33 @@ export function buildWordEntry(rawJson: string, forms: WordForms): WordEntry | n
 
   if (vietnamese.length === 0 && english.length === 0) return null
 
-  const jlpt = jisho?.jlpt?.[0]?.replace(/^jlpt-/i, '').toUpperCase() ?? null
+  // Jisho can list several levels (行く: n1 and n5); the easiest one is when
+  // learners meet the word, so take the highest N number.
+  const levels = (jisho?.jlpt ?? []).map(l => Number(/n(\d)/i.exec(l)?.[1])).filter(n => n >= 1 && n <= 5)
+  const jlpt = levels.length ? `N${Math.max(...levels)}` : null
 
-  return {
+  const pitchByReading = new Map<string, number>()
+  for (const p of mazii?.pronunciation ?? []) {
+    const n = pitchAccentNumber(p.accent)
+    const kana = p.kana?.trim()
+    if (n !== null && kana && !pitchByReading.has(kana)) pitchByReading.set(kana, n)
+  }
+
+  return cleanStrings({
+    forms,
     headword,
     otherWritings: forms.kanji.slice(1),
     readings: forms.kanji.length > 0 ? forms.readings : forms.readings.slice(1),
     pitchAccent: pitchAccentNumber(mazii?.pronunciation?.[0]?.accent),
+    pitchByReading,
     jlpt,
     common: jisho?.is_common === true,
     wordTypes: [...wordTypes],
+    kindCodes: [...kindCodes],
     vietnamese,
     english,
     keys: [...new Set([headword, ...forms.kanji, ...forms.readings])],
-  }
+  })
 }
 
 function splitReadings(text: string | undefined): string[] {
@@ -242,6 +296,8 @@ export function buildKanjiEntry(rawJson: string): KanjiEntry | null {
     kunyomi: kunyomi.length ? kunyomi : jisho?.kunyomi ?? [],
     jlpt: (mazii?.level?.[0] ?? jisho?.jlptLevel ?? null) || null,
     strokes: Number.isFinite(strokes) && strokes > 0 ? strokes : null,
+    grade: jisho?.taughtIn || null,
+    newspaperRank: Number(jisho?.newspaperFrequencyRank) || null,
     radical,
     components: (mazii?.compDetail ?? []).filter(c => c.w && c.w !== kanji).map(c => ({ kanji: c.w, hanViet: c.h ?? '' })),
     tip: meaningful(mazii?.tips?.vi) ? stripTags(mazii!.tips!.vi!).trim() : null,
@@ -252,5 +308,5 @@ export function buildKanjiEntry(rawJson: string): KanjiEntry | null {
   }
 
   if (!entry.hanViet && !entry.vietnamese && !entry.english) return null
-  return entry
+  return cleanStrings(entry)
 }

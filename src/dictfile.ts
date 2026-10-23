@@ -4,21 +4,19 @@
 import 'dotenv/config'
 import { createWriteStream, WriteStream } from 'node:fs'
 import { existsSync, mkdirSync } from 'node:fs'
-import { asc, gt, inArray, sql } from 'drizzle-orm'
+import { gt, sql } from 'drizzle-orm'
 import * as schema from '../schemas'
 import { getDatabase } from 'handler'
 import { hiraganaToKatakana, isAllKana } from 'kobo'
 import {
     buildKanjiEntry,
     buildWordEntry,
+    loadWordForms,
     type KanjiEntry,
     type WordEntry,
-    type WordForms,
 } from 'entries'
 
 const {
-    kEle,
-    rEle,
     rawKanjiCrawlJson,
     rawWordCrawlJson,
 } = schema
@@ -162,24 +160,6 @@ function capitalize(text: string): string {
     return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-// JMdict kanji/readings for each entry, in JMdict order.
-function loadForms(entryIds: number[]): Map<number, WordForms> {
-    const db = getDatabase()
-    const forms = new Map<number, WordForms>()
-    const get = (id: number) => {
-        let f = forms.get(id)
-        if (!f) forms.set(id, f = { kanji: [], readings: [] })
-        return f
-    }
-    db.select({ entryId: kEle.entryId, text: kEle.keb }).from(kEle)
-        .where(inArray(kEle.entryId, entryIds)).orderBy(asc(kEle.entryId), asc(kEle.position)).all()
-        .forEach(r => get(r.entryId).kanji.push(r.text))
-    db.select({ entryId: rEle.entryId, text: rEle.reb }).from(rEle)
-        .where(inArray(rEle.entryId, entryIds)).orderBy(asc(rEle.entryId), asc(rEle.position)).all()
-        .forEach(r => get(r.entryId).readings.push(r.text))
-    return forms
-}
-
 async function writeAllEntries(ws: WriteStream, chunkLimit: number) {
     const db = getDatabase()
     const count = (table: typeof rawWordCrawlJson | typeof rawKanjiCrawlJson) =>
@@ -198,7 +178,7 @@ async function writeAllEntries(ws: WriteStream, chunkLimit: number) {
             .where(gt(rawWordCrawlJson.id, lastId)).orderBy(rawWordCrawlJson.id).limit(chunkLimit).all()
         if (rows.length === 0) break
         lastId = rows[rows.length - 1]!.id
-        const forms = loadForms(rows.map(r => r.entryId))
+        const forms = loadWordForms(rows.map(r => r.entryId))
         for (const row of rows) {
             const f = forms.get(row.entryId)
             const entry = f ? buildWordEntry(row.json, f) : null
