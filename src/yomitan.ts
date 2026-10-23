@@ -11,6 +11,7 @@ import type {
     TermInformation,
 } from 'yomichan-dict-builder/dist/types/yomitan/termbank'
 import * as schema from '../schemas'
+import packageJson from '../package.json'
 import { getDatabase } from 'handler'
 import { buildKanjiEntry, buildWordEntry, loadWordForms, type KanjiEntry, type WordEntry } from 'entries'
 
@@ -18,7 +19,8 @@ const { rawKanjiCrawlJson, rawWordCrawlJson } = schema
 
 const OUTPUT_DIR = './output'
 const OUTPUT_FILE = 'lulujv.zip'
-const REVISION = '0.3'
+// The dictionary revision follows the project version in package.json.
+const REVISION = packageJson.version
 
 //----------------------------------------------------------------------
 // Styles. Colors are semi-transparent so they work in light and dark themes.
