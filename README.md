@@ -165,7 +165,16 @@ bun run main yomitan
 
 This writes **`output/lulujv.zip`**. In Yomitan, open *Settings → Dictionaries → Import* and select the ZIP.
 
-> The Yomitan export still uses the older, simpler entry format. It does not have the new Kobo layout yet.
+Each entry uses Yomitan's rich formatting:
+
+- word-type pills, numbered Vietnamese meanings with example sentences, and a separate English section
+- Yomitan's built-in **pitch-accent** graph (from Mazii)
+- **★** (common word) and **JLPT** tags
+- all spellings of a word grouped into one result, using JMdict's entry numbers
+- inflected forms are found too (食べた → 食べる)
+- kanji cards with Hán Việt, explanations and a stats table (strokes, JLPT, grade, newspaper frequency, radical, components)
+
+Each part of an entry has a `data-sc-content` attribute (`vietnamese`, `english`, `example`, `word-types`, `section-label`), so you can restyle it with Yomitan's custom CSS setting.
 
 ### All commands
 
