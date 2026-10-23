@@ -42,3 +42,6 @@ bun.lockb
 
 output/
 /custom
+
+# crawled database (Mazii/Jisho data is not ours to share)
+dbs/

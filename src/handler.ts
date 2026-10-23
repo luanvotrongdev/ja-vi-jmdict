@@ -5,7 +5,7 @@ import { Database } from 'bun:sqlite'
 import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
 import { rawKanjiCrawlJson, rawWordCrawlJson } from '../schemas'
 import { cwd, env } from 'process'
-import { rm } from 'fs/promises'
+import { mkdir, rm } from 'fs/promises'
 
 type DrizzleDb = BunSQLiteDatabase<typeof schema>
 
@@ -68,7 +68,9 @@ export function resetCrawlTable() {
 }
 
 export async function resetAll() {
-    await rm(resolveDatabasePath())
+    // force: a fresh clone has no database yet
+    await rm(resolveDatabasePath(), { force: true })
+    await mkdir(path.dirname(resolveDatabasePath()), { recursive: true })
     await pushSchema(resolveDatabasePath())
 }
 
