@@ -12,6 +12,7 @@ import {
   resetCrawlTable, 
   resolveDatabasePath } from 'handler'
 import { buildDictfile } from 'dictfile'
+import { buildKobo } from 'kobo'
 
 type YesNoDefault = true | false
 
@@ -92,7 +93,8 @@ const actions: Record<string, () => Promise<void>> = {
   crawl: async () => { await crawlWithRetryAsync() },
   yomitan: async () => { await buildYomitan() },
   parse: async () => { await writeJmdictToDatabase() },
-  dictfile: async()=> { await buildDictfile() }
+  dictfile: async()=> { await buildDictfile() },
+  kobo: async () => { await buildKobo() },
 }
 
 const command = process.argv[2]
@@ -106,6 +108,7 @@ if (!action) {
   console.error('       crawl         - start jisho/mazii crawl')
   console.error('       yomitan       - start yomitan export')
   console.error('       dictfile      - start dictfile export')
+  console.error('       kobo          - run dictgen on the dictfile and build output/dicthtml-ja.zip')
   process.exit(1)
 }
 

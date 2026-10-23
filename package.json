@@ -26,6 +26,7 @@
     "drizzle-orm": "^0.44.7",
     "fast-xml-parser": "^5.2.1",
     "japanese-furigana-normalize": "^1.0.5",
+    "jszip": "3.10.1",
     "unofficial-jisho-api": "^2.3.4",
     "yomichan-dict-builder": "^2.10.0"
   }

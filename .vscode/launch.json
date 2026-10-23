@@ -10,7 +10,7 @@
             "name": "Debug crawl Script",
             "runtimeArgs": [
                 "run",
-                "--env-file=.dev.env",
+                "--env-file=.env",
                 "main",
                 "crawl"
             ],
